@@ -1,0 +1,197 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Bảng Báo Giá Dự Án IoT Camera</title>
+    <style>
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background-color: #f4f7fa;
+            color: #333;
+            line-height: 1.6;
+            padding: 20px;
+        }
+        .container {
+            max-width: 900px;
+            margin: 0 auto;
+            background: #fff;
+            padding: 40px;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.05);
+            border-radius: 8px;
+            border-top: 5px solid #2563eb;
+        }
+        .header {
+            text-align: center;
+            margin-bottom: 40px;
+            border-bottom: 2px solid #e2e8f0;
+            padding-bottom: 20px;
+        }
+        .header h1 {
+            color: #1e40af;
+            font-size: 28px;
+            margin-bottom: 5px;
+            text-transform: uppercase;
+        }
+        .header p {
+            color: #64748b;
+            font-size: 16px;
+            margin: 0;
+        }
+        h2 {
+            color: #1e40af;
+            font-size: 20px;
+            margin-top: 30px;
+            margin-bottom: 15px;
+            border-left: 4px solid #3b82f6;
+            padding-left: 10px;
+        }
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-bottom: 30px;
+            font-size: 15px;
+        }
+        th, td {
+            border: 1px solid #cbd5e1;
+            padding: 12px 15px;
+            text-align: left;
+        }
+        th {
+            background-color: #f8fafc;
+            color: #1e293b;
+            font-weight: 600;
+            text-align: center;
+        }
+        td:nth-child(1), td:nth-child(3) {
+            text-align: center;
+        }
+        td.number {
+            text-align: right;
+            font-weight: 500;
+        }
+        .total-row {
+            background-color: #eff6ff;
+            font-weight: bold;
+            color: #1d4ed8;
+        }
+        .total-row td {
+            font-size: 16px;
+        }
+        .grand-total {
+            background-color: #1e40af;
+            color: white;
+            text-align: right;
+            padding: 20px;
+            font-size: 22px;
+            font-weight: bold;
+            border-radius: 6px;
+            margin-top: 20px;
+        }
+        .footer-note {
+            margin-top: 30px;
+            font-size: 14px;
+            color: #64748b;
+            font-style: italic;
+        }
+    </style>
+</head>
+<body>
+
+<div class="container">
+    <div class="header">
+        <h1>BẢNG BÁO GIÁ DỰ ÁN</h1>
+        <p>Hệ Thống Camera Điểm Danh Tự Động Bằng AI & Thiết Bị Cảnh Báo IoT</p>
+        <p style="margin-top: 10px;">Ngày báo giá: 31/08/2026</p>
+    </div>
+
+    <!-- BẢNG 1: BÁO GIÁ PHẦN MỀM & TRIỂN KHAI -->
+    <h2>1. PHẦN MỀM & TRIỂN KHAI DỰ ÁN</h2>
+    <table>
+        <thead>
+            <tr>
+                <th width="5%">STT</th>
+                <th width="50%">Hạng mục công việc / Chức năng</th>
+                <th width="10%">ĐV</th>
+                <th width="15%">Đơn giá (VNĐ)</th>
+                <th width="20%">Thành tiền (VNĐ)</th>
+            </tr>
+        </thead>
+        <tbody>
+            <tr>
+                <td>1</td>
+                <td>Xây dựng mô hình AI nhận diện khuôn mặt tự động</td>
+                <td>Gói</td>
+                <td class="number">1,000,000</td>
+                <td class="number">1,000,000</td>
+            </tr>
+            <tr>
+                <td>2</td>
+                <td>Lập trình Giao diện Quản trị Web Dashboard (Frontend + API)</td>
+                <td>Gói</td>
+                <td class="number">900,000</td>
+                <td class="number">900,000</td>
+            </tr>
+            <tr>
+                <td>3</td>
+                <td>Lập trình Nhúng ESP32 & Giao thức IoT MQTT cảnh báo</td>
+                <td>Gói</td>
+                <td class="number">700,000</td>
+                <td class="number">700,000</td>
+            </tr>
+            <tr>
+                <td>4</td>
+                <td>Triển khai, lắp đặt, tinh chỉnh hệ thống & Chuyển giao</td>
+                <td>Gói</td>
+                <td class="number">400,000</td>
+                <td class="number">400,000</td>
+            </tr>
+            <tr class="total-row">
+                <td colspan="4" style="text-align: right;">Cộng phần triển khai (A):</td>
+                <td class="number">3,000,000</td>
+            </tr>
+        </tbody>
+    </table>
+
+    <!-- BẢNG 2: BÁO GIÁ PHẦN CỨNG -->
+    <h2>2. PHẦN CỨNG & LINH KIỆN (BOM)</h2>
+    <table>
+        <thead>
+            <tr>
+                <th width="5%">STT</th>
+                <th width="40%">Tên linh kiện</th>
+                <th width="10%">SL</th>
+                <th width="20%">Đơn giá (VNĐ)</th>
+                <th width="25%">Thành tiền (VNĐ)</th>
+            </tr>
+        </thead>
+        <tbody>
+            <tr><td>1</td><td>Webcam USB</td><td>1</td><td class="number">600,000</td><td class="number">600,000</td></tr>
+            <tr><td>2</td><td>Mạch ESP32 Dev V1</td><td>1</td><td class="number">155,000</td><td class="number">155,000</td></tr>
+            <tr><td>3</td><td>Màn hình LCD 16x02 (kèm I2C)</td><td>1</td><td class="number">90,000</td><td class="number">90,000</td></tr>
+            <tr><td>4</td><td>Mạch Breakout ESP32</td><td>1</td><td class="number">70,000</td><td class="number">70,000</td></tr>
+            <tr><td>5</td><td>Bộ dây nối + Nút nhấn + Đèn LED</td><td>1</td><td class="number">90,000</td><td class="number">90,000</td></tr>
+            <tr><td>6</td><td>Còi báo động (Buzzer)</td><td>1</td><td class="number">35,000</td><td class="number">35,000</td></tr>
+            <tr><td>7</td><td>Module nguồn</td><td>1</td><td class="number">45,000</td><td class="number">45,000</td></tr>
+            <tr><td>8</td><td>Mạch sạc (TP4056)</td><td>1</td><td class="number">15,000</td><td class="number">15,000</td></tr>
+            <tr><td>9</td><td>Pin Lithium</td><td>1</td><td class="number">50,000</td><td class="number">50,000</td></tr>
+            <tr class="total-row">
+                <td colspan="4" style="text-align: right;">Cộng phần cứng (B):</td>
+                <td class="number">1,150,000</td>
+            </tr>
+        </tbody>
+    </table>
+
+    <div class="grand-total">
+        TỔNG GIÁ TRỊ DỰ ÁN (A + B): 4,150,000 VNĐ
+    </div>
+
+    <div class="footer-note">
+        <p>* Ghi chú:</p>
+        <p>- Báo giá trên đã bao gồm toàn bộ chi phí vật tư, nhân công lập trình và triển khai trọn gói.</p>
+        <p>- Hệ thống được bàn giao kèm mã nguồn (Source Code) và tài liệu hướng dẫn lắp ráp phần cứng chi tiết.</p>
+    </div>
+</div>
+
+</body>
+</html>

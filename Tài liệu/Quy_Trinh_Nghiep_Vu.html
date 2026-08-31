@@ -1,0 +1,360 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Quy Trình Nghiệp Vụ - Điểm Danh Sinh Viên</title>
+    <!-- Font Awesome -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <!-- Google Fonts -->
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600;700&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --primary: #4f46e5;
+            --primary-light: #e0e7ff;
+            --secondary: #64748b;
+            --success: #10b981;
+            --danger: #ef4444;
+            --warning: #f59e0b;
+            --bg: #f8fafc;
+            --card-bg: #ffffff;
+            --text-main: #1e293b;
+            --text-muted: #64748b;
+        }
+
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+        }
+
+        body {
+            font-family: 'Inter', sans-serif;
+            background-color: var(--bg);
+            color: var(--text-main);
+            line-height: 1.6;
+            padding: 40px 20px;
+        }
+
+        .container {
+            max-width: 900px;
+            margin: 0 auto;
+        }
+
+        .header {
+            text-align: center;
+            margin-bottom: 40px;
+        }
+
+        .header h1 {
+            color: var(--primary);
+            font-size: 2.5rem;
+            margin-bottom: 15px;
+        }
+
+        .header p {
+            color: var(--secondary);
+            font-size: 1.1rem;
+            max-width: 700px;
+            margin: 0 auto;
+        }
+
+        .overview-card {
+            background: linear-gradient(135deg, var(--primary), #818cf8);
+            color: white;
+            padding: 30px;
+            border-radius: 12px;
+            margin-bottom: 40px;
+            box-shadow: 0 10px 25px -5px rgba(79, 70, 229, 0.4);
+        }
+
+        .overview-card h2 {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            margin-bottom: 15px;
+            font-size: 1.5rem;
+        }
+
+        .overview-card ul {
+            list-style: none;
+            padding-left: 0;
+        }
+
+        .overview-card li {
+            margin-bottom: 10px;
+            font-size: 1.1rem;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .workflow-section {
+            margin-bottom: 40px;
+        }
+
+        .workflow-section h2 {
+            color: var(--text-main);
+            font-size: 1.8rem;
+            margin-bottom: 25px;
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            border-bottom: 2px solid var(--primary-light);
+            padding-bottom: 10px;
+        }
+
+        .workflow-card {
+            background-color: var(--card-bg);
+            border-radius: 12px;
+            padding: 25px;
+            margin-bottom: 20px;
+            box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05);
+            border-left: 5px solid var(--primary);
+            transition: transform 0.2s ease;
+        }
+
+        .workflow-card:hover {
+            transform: translateY(-3px);
+        }
+
+        .workflow-card.onboarding { border-left-color: var(--primary); }
+        .workflow-card.attendance { border-left-color: var(--success); }
+        .workflow-card.security { border-left-color: var(--danger); }
+        .workflow-card.admin { border-left-color: var(--warning); }
+
+        .workflow-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: flex-start;
+            margin-bottom: 15px;
+        }
+
+        .workflow-title {
+            font-size: 1.3rem;
+            font-weight: 700;
+            color: var(--text-main);
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .workflow-badge {
+            font-size: 0.85rem;
+            padding: 4px 10px;
+            border-radius: 20px;
+            font-weight: 600;
+            background-color: var(--primary-light);
+            color: var(--primary);
+        }
+
+        .workflow-content {
+            padding-left: 10px;
+        }
+
+        .step {
+            display: flex;
+            margin-bottom: 15px;
+            align-items: flex-start;
+            position: relative;
+        }
+
+        .step:last-child {
+            margin-bottom: 0;
+        }
+
+        .step-number {
+            flex-shrink: 0;
+            width: 30px;
+            height: 30px;
+            background-color: var(--primary-light);
+            color: var(--primary);
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: bold;
+            margin-right: 15px;
+            z-index: 2;
+        }
+
+        .step-text {
+            padding-top: 3px;
+        }
+
+        .step-text strong {
+            color: var(--text-main);
+            display: block;
+            margin-bottom: 3px;
+        }
+        
+        .step-text p {
+            color: var(--text-muted);
+            margin: 0;
+        }
+    </style>
+</head>
+<body>
+
+<div class="container">
+    <div class="header">
+        <h1><i class="fa-solid fa-graduation-cap"></i> Quy Trình Điểm Danh Sinh Viên</h1>
+    </div>
+
+    <div class="overview-card">
+        <h2><i class="fa-solid fa-bullseye"></i> Tổng Quan Nghiệp Vụ</h2>
+        <p style="margin-bottom: 15px; font-size: 1.1rem;">Hệ thống điểm danh tự động bằng AI giúp:</p>
+        <ul>
+            <li><i class="fa-solid fa-circle-check"></i> <strong>Tự động hóa:</strong> Điểm danh ngay khi sinh viên bước vào lớp.</li>
+            <li><i class="fa-solid fa-ban"></i> <strong>Chống học hộ:</strong> Nhận diện chính xác khuôn mặt từng người.</li>
+            <li><i class="fa-solid fa-clock-rotate-left"></i> <strong>Tiết kiệm thời gian:</strong> Không làm gián đoạn bài giảng.</li>
+        </ul>
+    </div>
+
+    <div class="workflow-section">
+        <h2><i class="fa-solid fa-sitemap"></i> Các Luồng Quy Trình Chính (Workflows)</h2>
+
+        <!-- Luồng 1 -->
+        <div class="workflow-card onboarding">
+            <div class="workflow-header">
+                <div class="workflow-title">
+                    <i class="fa-solid fa-user-plus" style="color: var(--primary)"></i> 
+                    Quy Trình Đăng Ký Sinh Viên
+                </div>
+            </div>
+            <div class="workflow-content">
+                <div class="step">
+                    <div class="step-number" style="background: #e0e7ff; color: #4f46e5;">1</div>
+                    <div class="step-text">
+                        <strong>Nhập thông tin</strong>
+                        <p>Giảng viên nhập Họ Tên và MSSV của sinh viên lên hệ thống Web.</p>
+                    </div>
+                </div>
+                <div class="step">
+                    <div class="step-number" style="background: #e0e7ff; color: #4f46e5;">2</div>
+                    <div class="step-text">
+                        <strong>Lấy mẫu khuôn mặt</strong>
+                        <p>Sinh viên đứng trước Camera, xoay mặt qua lại các góc để AI chụp hình tự động trong 10 giây.</p>
+                    </div>
+                </div>
+                <div class="step">
+                    <div class="step-number" style="background: #e0e7ff; color: #4f46e5;">3</div>
+                    <div class="step-text">
+                        <strong>Hoàn tất</strong>
+                        <p>Dữ liệu được lưu trữ. Sinh viên đã sẵn sàng để điểm danh.</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Luồng 2 -->
+        <div class="workflow-card attendance">
+            <div class="workflow-header">
+                <div class="workflow-title">
+                    <i class="fa-solid fa-clipboard-check" style="color: var(--success)"></i> 
+                    Quy Trình Điểm Danh Tự Động
+                </div>
+            </div>
+            <div class="workflow-content">
+                <div class="step">
+                    <div class="step-number" style="background: #d1fae5; color: #059669;">1</div>
+                    <div class="step-text">
+                        <strong>Sinh viên vào lớp</strong>
+                        <p>Sinh viên đi ngang qua Camera được đặt ở cửa lớp.</p>
+                    </div>
+                </div>
+                <div class="step">
+                    <div class="step-number" style="background: #d1fae5; color: #059669;">2</div>
+                    <div class="step-text">
+                        <strong>Nhận diện AI</strong>
+                        <p>Hệ thống so sánh khuôn mặt với danh sách sinh viên trong lớp.</p>
+                    </div>
+                </div>
+                <div class="step">
+                    <div class="step-number" style="background: #d1fae5; color: #059669;">3</div>
+                    <div class="step-text">
+                        <strong>Thông báo tại chỗ</strong>
+                        <p>Màn hình hiển thị tên sinh viên, còi báo kêu 1 tiếng "Bíp" và đèn xanh sáng lên.</p>
+                    </div>
+                </div>
+                <div class="step">
+                    <div class="step-number" style="background: #d1fae5; color: #059669;">4</div>
+                    <div class="step-text">
+                        <strong>Lưu dữ liệu</strong>
+                        <p>Thời gian điểm danh được cập nhật tự động lên màn hình giám sát của giảng viên.</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Luồng 3: Cảnh báo người lạ -->
+        <div class="workflow-card security">
+            <div class="workflow-header">
+                <div class="workflow-title">
+                    <i class="fa-solid fa-triangle-exclamation" style="color: var(--danger)"></i> 
+                    Quy Trình Cảnh Báo Người Lạ (Chống Học Hộ)
+                </div>
+            </div>
+            <div class="workflow-content">
+                <div class="step">
+                    <div class="step-number" style="background: #fee2e2; color: #dc2626;">1</div>
+                    <div class="step-text">
+                        <strong>Phát hiện người lạ</strong>
+                        <p>Một người không có khuôn mặt trong danh sách lớp bước qua Camera.</p>
+                    </div>
+                </div>
+                <div class="step">
+                    <div class="step-number" style="background: #fee2e2; color: #dc2626;">2</div>
+                    <div class="step-text">
+                        <strong>Cảnh báo tại chỗ</strong>
+                        <p>Màn hình lập tức hiện chữ "Cảnh Báo Người Lạ" và Đèn LED Đỏ sáng rực trong 5 giây.</p>
+                    </div>
+                </div>
+                <div class="step">
+                    <div class="step-number" style="background: #fee2e2; color: #dc2626;">3</div>
+                    <div class="step-text">
+                        <strong>Báo cáo Giảng viên</strong>
+                        <p>Cảnh báo màu đỏ được gửi trực tiếp lên màn hình Web của Giảng viên để dễ dàng phát hiện người học hộ.</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Luồng 4 -->
+        <div class="workflow-card admin">
+            <div class="workflow-header">
+                <div class="workflow-title">
+                    <i class="fa-solid fa-chalkboard-user" style="color: var(--warning)"></i> 
+                    Giảng Viên Giám Sát
+                </div>
+            </div>
+            <div class="workflow-content">
+                <div class="step">
+                    <div class="step-number" style="background: #fef3c7; color: #d97706;">1</div>
+                    <div class="step-text">
+                        <strong>Theo dõi lớp học</strong>
+                        <p>Giảng viên xem danh sách sinh viên đã điểm danh hiển thị trực tiếp trên Web.</p>
+                    </div>
+                </div>
+                <div class="step">
+                    <div class="step-number" style="background: #fef3c7; color: #d97706;">2</div>
+                    <div class="step-text">
+                        <strong>Xem lịch sử</strong>
+                        <p>Xem lại lịch sử điểm danh của các ngày học trước.</p>
+                    </div>
+                </div>
+                <div class="step">
+                    <div class="step-number" style="background: #fef3c7; color: #d97706;">3</div>
+                    <div class="step-text">
+                        <strong>Quản lý sinh viên</strong>
+                        <p>Thêm mới hoặc xóa sinh viên khỏi danh sách lớp một cách dễ dàng.</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+    </div>
+</div>
+
+</body>
+</html>

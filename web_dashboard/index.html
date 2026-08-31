@@ -1,0 +1,277 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Hệ Thống Điểm Danh & Cảnh Báo IoT</title>
+
+    <!-- Google Fonts -->
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600;800&display=swap" rel="stylesheet">
+    <!-- Font Awesome -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <!-- Custom CSS -->
+    <link rel="stylesheet" href="style.css">
+    <!-- MQTT.js -->
+    <script src="https://unpkg.com/mqtt/dist/mqtt.min.js"></script>
+</head>
+<body>
+    <div class="background-animation"></div>
+
+    <div class="container">
+        <header class="glass-panel">
+            <div class="header-content">
+                <div class="logo">
+                    <i class="fa-solid fa-camera-rotate"></i>
+                    <h1>AI Attendance &amp; IoT Alerts</h1>
+                </div>
+                <div class="header-status">
+                    <span id="backend-status" class="status-badge disconnected">
+                        <i class="fa-solid fa-server"></i> Backend offline
+                    </span>
+                    <span id="mqtt-status" class="status-badge disconnected">
+                        <i class="fa-solid fa-circle"></i> Mất kết nối MQTT
+                    </span>
+                </div>
+            </div>
+            <!-- Tab nav -->
+            <nav class="tab-nav">
+                <button class="tab-btn active" data-tab="dashboard"><i class="fa-solid fa-gauge-high"></i> Bảng Điều Khiển</button>
+                <button class="tab-btn" data-tab="camera"><i class="fa-solid fa-video"></i> Camera</button>
+                <button class="tab-btn" data-tab="register"><i class="fa-solid fa-user-plus"></i> Đăng Ký Nhân Viên</button>
+                <button class="tab-btn" data-tab="history"><i class="fa-solid fa-clock-rotate-left"></i> Lịch Sử</button>
+                <button class="tab-btn" data-tab="settings"><i class="fa-solid fa-gear"></i> Cấu Hình</button>
+            </nav>
+        </header>
+
+        <main>
+            <!-- ======== TAB: BẢNG ĐIỀU KHIỂN ======== -->
+            <section id="tab-dashboard" class="tab-content active">
+                <div class="dashboard-grid">
+                    <!-- Cột trái: Bảng điểm danh realtime -->
+                    <div class="panel glass-panel attendance-panel">
+                        <div class="panel-header">
+                            <h2><i class="fa-solid fa-users-viewfinder"></i> Lịch Sử Điểm Danh</h2>
+                            <span class="badge" id="total-count">0 người</span>
+                        </div>
+                        <div class="table-container">
+                            <table id="attendance-table">
+                                <thead>
+                                    <tr>
+                                        <th>STT</th>
+                                        <th>Họ và Tên</th>
+                                        <th>MSSV</th>
+                                        <th>Thời Gian</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="attendance-body">
+                                    <tr class="empty-row"><td colspan="4">Đang tải dữ liệu...</td></tr>
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+
+                    <!-- Cột phải: Cảnh báo & Điều khiển -->
+                    <div class="right-col">
+                        <div class="panel glass-panel alert-panel" id="alert-box">
+                            <div class="panel-header">
+                                <h2><i class="fa-solid fa-triangle-exclamation"></i> Cảnh Báo An Ninh</h2>
+                            </div>
+                            <div class="alert-content" id="alert-content">
+                                <div class="icon-pulse">
+                                    <i class="fa-solid fa-shield-halved"></i>
+                                </div>
+                                <h3>Hệ Thống An Toàn</h3>
+                                <p>Chưa phát hiện người lạ trong khu vực.</p>
+                            </div>
+                        </div>
+
+                        <div class="panel glass-panel control-panel">
+                            <div class="panel-header">
+                                <h2><i class="fa-solid fa-sliders"></i> Điều Khiển IoT</h2>
+                            </div>
+                            <div id="iot-control-status" class="iot-command-status">Chưa gửi lệnh.</div>
+                            <div class="control-actions">
+                                <button id="btn-reset-alert" class="btn btn-secondary">
+                                    <i class="fa-solid fa-volume-xmark"></i> Tắt Còi Báo Động
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </section>
+
+            <!-- ======== TAB: CAMERA ======== -->
+            <section id="tab-camera" class="tab-content">
+                <div class="panel glass-panel camera-panel">
+                    <div class="panel-header">
+                        <h2><i class="fa-solid fa-video"></i> Giám Sát Camera &amp; Nhận Diện</h2>
+                        <div class="camera-controls">
+                            <span id="recognizer-status" class="status-badge disconnected">
+                                <i class="fa-solid fa-robot"></i> Nhận diện: tắt
+                            </span>
+                            <button id="btn-toggle-recognizer" class="btn btn-primary">
+                                <i class="fa-solid fa-face-smile"></i> Bật Nhận Diện
+                            </button>
+                            <button id="btn-toggle-camera" class="btn btn-secondary">
+                                <i class="fa-solid fa-play"></i> Bật Camera
+                            </button>
+                        </div>
+                    </div>
+                    <div class="camera-viewer" id="camera-viewer">
+                        <div class="camera-placeholder">
+                            <i class="fa-solid fa-video-slash"></i>
+                            <p>Camera chưa bật.</p>
+                            <p class="hint">Bật camera, sau đó nhấn "Bật Nhận Diện" để điểm danh tự động.<br>Khuôn mặt được nhận diện ngay trên video stream.</p>
+                        </div>
+                    </div>
+                </div>
+            </section>
+
+            <!-- ======== TAB: ĐĂNG KÝ NHÂN VIÊN ======== -->
+            <section id="tab-register" class="tab-content">
+                <div class="panel glass-panel register-panel">
+                    <div class="panel-header">
+                        <h2><i class="fa-solid fa-user-plus"></i> Đăng Ký Nhân Viên Mới</h2>
+                    </div>
+                    <div class="register-grid">
+                        <div class="register-form">
+                            <div class="form-group">
+                                <label for="reg-name">Họ và Tên (không dấu, VD: Nguyen_Van_A)</label>
+                                <input type="text" id="reg-name" placeholder="Nguyen_Van_A">
+                            </div>
+                            <div class="form-group">
+                                <label for="reg-id">MSSV</label>
+                                <input type="text" id="reg-id" placeholder="123456">
+                            </div>
+                            <button id="btn-register" class="btn btn-primary btn-block">
+                                <i class="fa-solid fa-camera"></i> Bắt Đầu Đăng Ký
+                            </button>
+                        </div>
+                        <div class="register-progress">
+                            <div id="reg-status" class="reg-status idle">
+                                <i class="fa-solid fa-person-rays"></i>
+                                <p>Điền thông tin và bấm nút để bắt đầu.<br>Bạn sẽ phải đứng trước <strong>camera của hệ thống</strong> (máy chạy backend).</p>
+                            </div>
+                            <div id="reg-progress-bar-wrap" class="progress-wrap hidden">
+                                <div class="progress-bar" id="reg-progress-bar"></div>
+                            </div>
+                            <p id="reg-count" class="reg-count"></p>
+
+                            <!-- Luồng Camera soi gương lúc đăng ký -->
+                            <div id="reg-camera-viewer" style="margin-top: 15px; text-align: center; border-radius: 8px; overflow: hidden; max-height: 250px; background: #000;">
+                                <!-- Sẽ được JS chèn thẻ img mjpeg stream vào đây khi bắt đầu đăng ký -->
+                            </div>
+                        </div>
+                        </div>
+                    </div>
+
+                    <!-- DANH SÁCH NHÂN VIÊN ĐÃ ĐĂNG KÝ -->
+                    <div class="panel-header" style="margin-top:3rem">
+                        <h2><i class="fa-solid fa-address-book"></i> Danh Sách Đã Đăng Ký</h2>
+                    </div>
+                    <div class="table-container">
+                        <table id="employees-table">
+                            <thead>
+                                <tr>
+                                    <th>STT</th>
+                                    <th>Họ và Tên</th>
+                                    <th>MSSV</th>
+                                    <th>Số Mẫu Mặt</th>
+                                    <th>Thao Tác</th>
+                                </tr>
+                            </thead>
+                            <tbody id="employees-body">
+                                <tr class="empty-row"><td colspan="5">Đang tải danh sách...</td></tr>
+                            </tbody>
+                        </table>
+                    </div>
+                    
+                </div>
+            </section>
+
+            <!-- ======== TAB: LỊCH SỬ ======== -->
+            <section id="tab-history" class="tab-content">
+                <div class="panel glass-panel history-panel">
+                    <div class="panel-header">
+                        <h2><i class="fa-solid fa-clock-rotate-left"></i> Lịch Sử Điểm Danh (Lưu trữ)</h2>
+                    </div>
+                    <div class="table-container">
+                        <table id="history-table">
+                            <thead>
+                                <tr>
+                                    <th>STT</th>
+                                    <th>Họ và Tên</th>
+                                    <th>MSSV</th>
+                                    <th>Thời Gian</th>
+                                </tr>
+                            </thead>
+                            <tbody id="history-body">
+                                <tr class="empty-row"><td colspan="4">Đang tải lịch sử từ backend...</td></tr>
+                            </tbody>
+                        </table>
+                    </div>
+
+                    <div class="panel-header" style="margin-top:2rem">
+                        <h2><i class="fa-solid fa-triangle-exclamation"></i> Lịch Sử Cảnh Báo</h2>
+                    </div>
+                    <div class="table-container">
+                        <table id="alerts-table">
+                            <thead>
+                                <tr>
+                                    <th>STT</th>
+                                    <th>Trạng Thái</th>
+                                    <th>Thời Gian</th>
+                                </tr>
+                            </thead>
+                            <tbody id="alerts-body">
+                                <tr class="empty-row"><td colspan="3">Đang tải lịch sử từ backend...</td></tr>
+                            </tbody>
+                        </table>
+                    </div>
+
+                    <div class="panel-header" style="margin-top:2rem">
+                        <h2><i class="fa-solid fa-sliders"></i> Lịch Sử Điều Khiển IoT (ESP32)</h2>
+                    </div>
+                    <div class="table-container">
+                        <table id="controls-table">
+                            <thead>
+                                <tr>
+                                    <th>STT</th>
+                                    <th>Lệnh Gửi (Action)</th>
+                                    <th>Thời Gian</th>
+                                </tr>
+                            </thead>
+                            <tbody id="controls-body">
+                                <tr class="empty-row"><td colspan="3">Đang tải lịch sử từ backend...</td></tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </section>
+
+            <!-- ======== TAB: CẤU HÌNH ======== -->
+            <section id="tab-settings" class="tab-content">
+                <div class="panel glass-panel settings-panel">
+                    <div class="panel-header">
+                        <h2><i class="fa-solid fa-gear"></i> Cấu Hình Hệ Thống</h2>
+                    </div>
+                    <div class="settings-form">
+                        <label for="backend-url">Backend URL (máy chạy camera + Flask)</label>
+                        <div class="input-row">
+                            <input type="text" id="backend-url" placeholder="http://192.168.1.100:5000 hoặc URL ngrok">
+                            <button id="btn-save-backend" class="btn btn-primary">Lưu &amp; Tải</button>
+                        </div>
+                        <p class="hint">
+                            Frontend (Vercel) cần biết địa chỉ backend để đọc lịch sử &amp; stream camera.
+                            Nếu máy local không public, dùng ngrok/cloudflared hoặc để rỗng (chỉ dùng MQTT realtime).
+                        </p>
+                    </div>
+                </div>
+            </section>
+        </main>
+    </div>
+
+    <!-- Custom Script -->
+    <script src="script.js"></script>
+</body>
+</html>

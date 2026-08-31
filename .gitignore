@@ -1,0 +1,14 @@
+# Python
+python_app/venv/
+__pycache__/
+*.pyc
+python_app/attendance.db
+python_app/dataset/encodings.pickle
+
+# Node / Vercel
+node_modules/
+.vercel/
+
+# OS
+.DS_Store
+Thumbs.db

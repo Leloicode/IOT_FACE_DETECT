@@ -1,0 +1,317 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Sơ Đồ Lắp Ráp Phần Cứng ESP32</title>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap');
+        
+        body {
+            font-family: 'Inter', sans-serif;
+            line-height: 1.6;
+            color: #333;
+            max-width: 900px;
+            margin: 0 auto;
+            padding: 20px;
+            background-color: #f4f7f6;
+        }
+        
+        .container {
+            background-color: #fff;
+            padding: 40px;
+            border-radius: 12px;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.05);
+        }
+
+        h1, h2, h3 {
+            color: #1a365d;
+            border-bottom: 2px solid #edf2f7;
+            padding-bottom: 10px;
+            margin-top: 30px;
+        }
+        
+        h1 { font-size: 28px; text-align: center; border: none; margin-top: 0; }
+        
+        .alert {
+            padding: 15px;
+            border-radius: 8px;
+            margin-bottom: 20px;
+            border-left: 5px solid;
+        }
+        .alert-warning { background-color: #fffaf0; border-color: #ed8936; color: #9c4221; }
+        .alert-info { background-color: #ebf8ff; border-color: #4299e1; color: #2b6cb0; }
+        .alert-danger { background-color: #fff5f5; border-color: #f56565; color: #c53030; }
+
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin: 20px 0;
+            background-color: #fff;
+            border-radius: 8px;
+            overflow: hidden;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+        }
+        
+        th, td {
+            padding: 15px;
+            text-align: left;
+            border-bottom: 1px solid #edf2f7;
+        }
+        
+        th { background-color: #2b6cb0; color: #fff; font-weight: 600; }
+        tr:hover { background-color: #f7fafc; }
+        
+        .pin-esp { font-weight: bold; color: #e53e3e; background: #fff5f5; padding: 2px 8px; border-radius: 4px; }
+        .pin-vcc { font-weight: bold; color: #dd6b20; }
+        .pin-gnd { font-weight: bold; color: #4a5568; }
+        
+        .mermaid-wrapper {
+            background: #fff;
+            padding: 20px;
+            border-radius: 8px;
+            border: 1px solid #e2e8f0;
+            margin: 20px 0;
+            overflow-x: auto;
+        }
+    </style>
+    <!-- Load thư viện vẽ sơ đồ Mermaid JS -->
+    <script src="https://cdn.jsdelivr.net/npm/mermaid/dist/mermaid.min.js"></script>
+    <script>mermaid.initialize({startOnLoad:true});</script>
+</head>
+<body>
+
+<div class="container">
+    <h1>SƠ ĐỒ ĐẤU DÂY PHẦN CỨNG IOT CAMERA</h1>
+    <p class="intro">Tài liệu này hướng dẫn kỹ thuật viên cách lắp ráp phần cứng dựa trên ESP32. Sử dụng <strong>Đèn LED Xanh</strong> & <strong>Còi</strong> để báo điểm danh, <strong>Đèn LED Đỏ</strong> để cảnh báo người lạ.</p>
+
+    <!-- BẢNG DANH SÁCH LINH KIỆN -->
+    <div class="card">
+        <h2 class="card-title">1. Danh Sách Linh Kiện (Bill of Materials)</h2>
+        <p style="margin-bottom: 15px; color: #555;">Dưới đây là bảng liệt kê đầy đủ các linh kiện phần cứng (tổng chi phí ước tính ~1.040.000đ) theo dự toán dự án:</p>
+        <table>
+            <thead>
+                <tr>
+                    <th width="50">STT</th>
+                    <th width="200">Tên linh kiện</th>
+                    <th width="100">Số lượng</th>
+                    <th>Ghi chú / Chức năng</th>
+                </tr>
+            </thead>
+            <tbody>
+                <tr>
+                    <td align="center">1</td>
+                    <td><strong>Webcam USB</strong></td>
+                    <td align="center">1</td>
+                    <td>Cắm trực tiếp vào máy tính (Backend AI) để quay phim, quét khuôn mặt.</td>
+                </tr>
+                <tr>
+                    <td align="center">2</td>
+                    <td><strong>ESP32 Dev V1</strong></td>
+                    <td align="center">1</td>
+                    <td>Bộ não phần cứng, kết nối WiFi để nhận lệnh từ AI.</td>
+                </tr>
+                <tr>
+                    <td align="center">3</td>
+                    <td><strong>LCD 16x02 (kèm I2C)</strong></td>
+                    <td align="center">1</td>
+                    <td>Hiển thị tên sinh viên khi điểm danh hoặc cảnh báo người lạ.</td>
+                </tr>
+                <tr>
+                    <td align="center">4</td>
+                    <td><strong>Breakout ESP32</strong></td>
+                    <td align="center">1</td>
+                    <td>Đế ra chân giúp đấu dây dễ dàng, chắc chắn hơn, không cần hàn thiếc.</td>
+                </tr>
+                <tr>
+                    <td align="center">5</td>
+                    <td><strong>Dây nối, Nút nhấn, LED</strong></td>
+                    <td align="center">1 bộ</td>
+                    <td>Cần chuẩn bị dây cắm (Dupont) và 2 bóng LED (1 Đỏ, 1 Xanh lá).</td>
+                </tr>
+                <tr>
+                    <td align="center">6</td>
+                    <td><strong>Buzzer (Còi báo)</strong></td>
+                    <td align="center">1</td>
+                    <td>Kêu bíp bíp báo hiệu hệ thống đã nhận diện thành công.</td>
+                </tr>
+                <tr>
+                    <td align="center">7</td>
+                    <td><strong>Module nguồn</strong></td>
+                    <td align="center">1</td>
+                    <td>Mạch ổn áp / hạ áp đảm bảo điện áp ổn định.</td>
+                </tr>
+                <tr>
+                    <td align="center">8</td>
+                    <td><strong>Mạch sạc (TP4056)</strong></td>
+                    <td align="center">1</td>
+                    <td>Quản lý quá trình sạc cho pin Lithium một cách an toàn.</td>
+                </tr>
+                <tr>
+                    <td align="center">9</td>
+                    <td><strong>Pin Lithium</strong></td>
+                    <td align="center">1</td>
+                    <td>Cấp nguồn di động để khối ESP32 hoạt động độc lập (nếu không cắm điện tường).</td>
+                </tr>
+            </tbody>
+        </table>
+    </div>
+    <div class="card">
+        <h2 class="card-title">2. Sơ Đồ Khối (Mermaid)</h2>
+        
+        <div class="alert alert-info">
+            <strong>📌 Dành cho Thợ/Kỹ thuật viên:</strong> Mạch sử dụng vi điều khiển <strong>ESP32 (Board DEVKIT V1)</strong>. 
+            Mức logic của chip là 3.3V. Chức năng hệ thống chỉ bao gồm <strong>Hiển thị (LCD)</strong> và <strong>Cảnh báo (Buzzer/LED)</strong>. Không sử dụng Module Rơ-le (Relay) hay Nút nhấn ngoài.
+        </div>
+        
+        <p>Sơ đồ dưới đây thể hiện đường đi của các dây dẫn. (Nên dùng dây Đỏ cho nguồn VCC, dây Đen cho Mass/GND để dễ phân biệt).</p>
+    
+    <div class="mermaid-wrapper">
+        <div class="mermaid">
+        graph LR
+            subgraph ESP32 [Mạch ESP32 DEVKIT V1]
+                VIN[Chân VIN / 5V]
+                GND[Chân GND]
+                D22[Chân D22]
+                D4[Chân D4]
+                D5[Chân D5]
+                D15[Chân D15]
+            end
+
+            subgraph LCD [Màn hình LCD 16x2 I2C]
+                L_VCC[VCC]
+                L_GND[GND]
+                L_SDA[SDA]
+                L_SCL[SCL]
+            end
+
+            subgraph Buzzer [Còi Báo Động]
+                B_IN[Chân + / IN]
+                B_GND[Chân - / GND]
+            end
+
+            subgraph LED [Đèn LED Đỏ - Báo Động]
+                LED_IN[Chân Dương +]
+                LED_GND[Chân Âm -]
+            end
+
+            subgraph LED_GREEN [Đèn LED Xanh - Điểm Danh]
+                LEDG_IN[Chân Dương +]
+                LEDG_GND[Chân Âm -]
+            end
+
+            %% Cấp nguồn (Dây đỏ)
+            VIN ==>|Cấp Nguồn 5V| L_VCC
+
+            %% Cấp mass (Dây đen)
+            GND ==>|Nối Đất GND| L_GND
+            GND ==>|Nối Đất GND| B_GND
+            GND ==>|Nối Đất GND| LED_GND
+            GND ==>|Nối Đất GND| LEDG_GND
+
+            %% Tín hiệu I2C
+            D21 -.->|Dây SDA| L_SDA
+            D22 -.->|Dây SCL| L_SCL
+
+            %% Tín hiệu Điều khiển
+            D4 --->|Kích Còi Điểm Danh| B_IN
+            D5 --->|Kích Đèn Đỏ Người Lạ| LED_IN
+            D15 --->|Kích Đèn Xanh Điểm Danh| LEDG_IN
+
+            classDef power fill:#ffe6e6,stroke:#ff0000,stroke-width:2px;
+            classDef ground fill:#e6e6e6,stroke:#333333,stroke-width:2px;
+            classDef signal fill:#e6ffe6,stroke:#00aa00,stroke-width:2px;
+            
+            class VIN,L_VCC power;
+            class GND,L_GND,B_GND,LED_GND,LEDG_GND ground;
+            class D21,D22,D4,D5,D15,L_SDA,L_SCL,B_IN,LED_IN,LEDG_IN signal;
+        </div>
+    </div>
+    </div> <!-- Close Card 2 -->
+
+    <div class="card">
+        <h2 class="card-title">3. Bảng Nối Dây Chi Tiết (Pinout)</h2>
+    </div>
+    <table>
+        <thead>
+            <tr>
+                <th>Linh kiện cắm ngoài</th>
+                <th>Chân trên Linh Kiện</th>
+                <th>Cắm vào chân ESP32</th>
+                <th>Ghi chú / Chức năng</th>
+            </tr>
+        </thead>
+        <tbody>
+            <tr>
+                <td rowspan="4"><strong>Màn hình LCD 16x2<br>(Loại có mạch đen I2C)</strong></td>
+                <td class="pin-vcc">VCC</td>
+                <td><span class="pin-esp">VIN</span> (hoặc 5V)</td>
+                <td>Bắt buộc cấp 5V từ chân VIN thì màn hình mới sáng và rõ chữ.</td>
+            </tr>
+            <tr>
+                <td class="pin-gnd">GND</td>
+                <td><span class="pin-esp">GND</span></td>
+                <td>Nối chung mass (GND) toàn mạch.</td>
+            </tr>
+            <tr>
+                <td>SDA</td>
+                <td><span class="pin-esp">D21</span> (GPIO 21)</td>
+                <td>Chân truyền dữ liệu (Data) chuẩn I2C mặc định.</td>
+            </tr>
+            <tr>
+                <td>SCL</td>
+                <td><span class="pin-esp">D22</span> (GPIO 22)</td>
+                <td>Chân xung nhịp (Clock) chuẩn I2C mặc định.</td>
+            </tr>
+            <tr>
+                <td rowspan="2"><strong>Còi báo động (Buzzer)</strong></td>
+                <td class="pin-vcc">IN / Tín hiệu (+)</td>
+                <td><span class="pin-esp">D4</span> (GPIO 4)</td>
+                <td>Kêu bíp ngắn khi ĐIỂM DANH THÀNH CÔNG.</td>
+            </tr>
+            <tr>
+                <td class="pin-gnd">GND (-)</td>
+                <td><span class="pin-esp">GND</span></td>
+                <td>Nối mass chung.</td>
+            </tr>
+            <tr>
+                <td rowspan="2"><strong>Đèn LED Đỏ</strong></td>
+                <td class="pin-vcc">Chân Dương (+)</td>
+                <td><span class="pin-esp">D5</span> (GPIO 5)</td>
+                <td>Bật sáng liên tục 5 giây khi PHÁT HIỆN NGƯỜI LẠ.</td>
+            </tr>
+            <tr>
+                <td class="pin-gnd">Chân Âm (-)</td>
+                <td><span class="pin-esp">GND</span></td>
+                <td>Nối mass chung.</td>
+            </tr>
+            <tr>
+                <td rowspan="2"><strong>Đèn LED Xanh</strong></td>
+                <td class="pin-vcc">Chân Dương (+)</td>
+                <td><span class="pin-esp">D15</span> (GPIO 15)</td>
+                <td>Bật sáng 2 giây khi ĐIỂM DANH THÀNH CÔNG.</td>
+            </tr>
+            <tr>
+                <td class="pin-gnd">Chân Âm (-)</td>
+                <td><span class="pin-esp">GND</span></td>
+                <td>Nối mass chung.</td>
+            </tr>
+        </tbody>
+    </table>
+
+    <h2>3. ⚠️ Cảnh Báo Quan Trọng</h2>
+    
+    <div class="alert alert-danger">
+        <strong>1. Nguồn của LCD I2C:</strong> 
+        Tuyệt đối không cấp nguồn LCD từ chân <strong>3V3</strong> của ESP32. Chân 3.3V không cung cấp đủ điện áp sẽ làm màn hình bị tối đen, không hiện được chữ. Phải dùng chân <strong>VIN</strong> (Lấy điện 5V trực tiếp từ cổng USB).
+    </div>
+
+    <div class="alert alert-warning">
+        <strong>2. Xác nhận phần cứng LCD:</strong> 
+        Bảng vẽ này mặc định màn hình LCD đã được hàn sẵn mạch <strong>I2C chuyển đổi</strong> ở mặt lưng (mạch nhỏ màu đen có 4 chân). Nếu LCD mua về không có mạch đen này (chỉ có 16 lỗ cắm), vui lòng liên hệ lại với Lập trình viên để sửa lại File Code ngay lập tức.
+    </div>
+
+</div>
+
+</body>
+</html>

@@ -1,0 +1,7 @@
+opencv-python
+face-recognition
+paho-mqtt
+flask
+waitress
+flask-cors
+numpy<2.0.0
