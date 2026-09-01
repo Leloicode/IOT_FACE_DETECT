@@ -10,7 +10,7 @@ const TOPIC_CONTROL = 'iot_camera/attendance/control';
 
 // Backend URL (Flask local / tunnel). Lưu trong localStorage để cấu hình.
 const BACKEND_KEY = 'attendance_backend_url';
-let BACKEND_URL = localStorage.getItem(BACKEND_KEY) || '';
+let BACKEND_URL = localStorage.getItem(BACKEND_KEY) || 'http://localhost:5000';
 
 // ============================================================
 // DOM
