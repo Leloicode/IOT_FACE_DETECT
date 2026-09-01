@@ -202,6 +202,7 @@ def start_mqtt():
 # ----------------------------------------------------------------------
 current_frame = None          # frame mới nhất (BGR)
 current_frame_time = 0.0
+cap = None
 frame_lock = threading.Lock()
 
 # Kết quả nhận diện mới nhất để vẽ đè lên luồng stream nhanh
@@ -396,6 +397,7 @@ def recognizer_loop():
 
         else:
             # FRAME THEO DÕI: Không phân tích AI, chỉ gán tên cũ cho khuôn mặt gần nhất
+            available_tracked = tracked_faces.copy()
             for box in scaled_boxes:
                 t, r, b, l = box
                 cx = (l + r) / 2
@@ -403,7 +405,8 @@ def recognizer_loop():
                 
                 best_match = None
                 min_dist = 999999
-                for tf in tracked_faces:
+                best_match_idx = -1
+                for idx, tf in enumerate(available_tracked):
                     tt, tr, tb, tl = tf["box"]
                     tcx = (tl + tr) / 2
                     tcy = (tt + tb) / 2
@@ -411,9 +414,12 @@ def recognizer_loop():
                     if dist < min_dist:
                         min_dist = dist
                         best_match = tf
+                        best_match_idx = idx
                 
                 if best_match and min_dist < 10000: # Nếu mặt di chuyển không quá xa
                     faces_to_draw.append((l, t, r, b, best_match["name"], best_match["color"]))
+                    # Xóa mặt đã match để không gán nhầm tên 1 người cho 2 khuôn mặt đứng gần nhau
+                    available_tracked.pop(best_match_idx)
                 else:
                     faces_to_draw.append((l, t, r, b, "Dang quet...", (0, 255, 255)))
 
