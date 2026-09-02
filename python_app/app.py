@@ -76,13 +76,24 @@ def init_db():
             time TEXT NOT NULL
         )
     """)
+    # Thử thêm cột image (nếu bảng cũ chưa có)
+    try:
+        conn.execute("ALTER TABLE attendance ADD COLUMN image TEXT")
+    except sqlite3.OperationalError:
+        pass
+
     conn.execute("""
         CREATE TABLE IF NOT EXISTS alerts (
             id INTEGER PRIMARY KEY AUTOINCREMENT,
             status TEXT NOT NULL,
-            time TEXT NOT NULL
+            time TEXT NOT NULL,
+            image TEXT
         )
     """)
+    try:
+        conn.execute("ALTER TABLE alerts ADD COLUMN image TEXT")
+    except sqlite3.OperationalError:
+        pass
     conn.execute("""
         CREATE TABLE IF NOT EXISTS controls (
             id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -94,19 +105,22 @@ def init_db():
     conn.close()
 
 
-def log_attendance(name, student_id, time_str):
+def log_attendance(name, student_id, time_str, image_url=""):
     conn = get_db()
     conn.execute(
-        "INSERT INTO attendance (name, student_id, time) VALUES (?, ?, ?)",
-        (name, student_id, time_str),
+        "INSERT INTO attendance (name, student_id, time, image) VALUES (?, ?, ?, ?)",
+        (name, student_id, time_str, image_url),
     )
     conn.commit()
     conn.close()
 
 
-def log_alert(status, time_str):
+def log_alert(status, time_str, image_url=""):
     conn = get_db()
-    conn.execute("INSERT INTO alerts (status, time) VALUES (?, ?)", (status, time_str))
+    conn.execute(
+        "INSERT INTO alerts (status, time, image) VALUES (?, ?, ?)", 
+        (status, time_str, image_url)
+    )
     conn.commit()
     conn.close()
 
@@ -159,18 +173,20 @@ def on_mqtt_message(client, userdata, msg):
     if msg.topic == TOPIC_RESULT:
         name = data.get("name", "Unknown")
         sid = data.get("id", "")
+        image = data.get("image", "")
         # Chống trùng ngay tại backend (kể cả khi Python gửi 2 lần)
         if already_attended_today(sid):
             print(f"[INFO] {name} ({sid}) hôm nay đã điểm danh, bỏ qua.")
             return
-        log_attendance(name, sid, time_str)
+        log_attendance(name, sid, time_str, image)
         event = {"type": "attendance", "payload": {**data, "time": time_str}}
         push_event(event)
         print(f"[LOG] Điểm danh: {name} - {sid} - {time_str}")
 
     elif msg.topic == TOPIC_ALERT:
         status = data.get("status", "stranger")
-        log_alert(status, time_str)
+        image = data.get("image", "")
+        log_alert(status, time_str, image)
         event = {"type": "alert", "payload": {**data, "time": time_str}}
         push_event(event)
         print(f"[LOG] Cảnh báo: {status} - {time_str}")
@@ -204,31 +220,48 @@ current_frame = None          # frame mới nhất (BGR)
 current_frame_time = 0.0
 cap = None
 frame_lock = threading.Lock()
+camera_restart_flag = False
 
 # Kết quả nhận diện mới nhất để vẽ đè lên luồng stream nhanh
 latest_faces = []
 latest_faces_time = 0.0
 faces_lock = threading.Lock()
 
+def enhance_image(frame):
+    """
+    Tăng sáng toàn cục để làm rõ khuôn mặt bị ngược sáng.
+    Không dùng CLAHE vì dễ sinh nhiễu làm nhiễu thuật toán HOG.
+    """
+    try:
+        return cv2.convertScaleAbs(frame, alpha=1.2, beta=30)
+    except Exception:
+        return frame
+
 
 def camera_reader():
     """Đọc liên tục từ camera vào buffer. Chạy nền, không chặn stream."""
-    global current_frame, current_frame_time, cap
-    cap = cv2.VideoCapture(CAMERA_SOURCE)
-    # Ép camera không được lưu bộ đệm (giảm độ trễ/delay hình ảnh về 0)
-    cap.set(cv2.CAP_PROP_BUFFERSIZE, 1)
-    if not cap.isOpened(): return
-    cap.set(cv2.CAP_PROP_FRAME_WIDTH, 640)
-    cap.set(cv2.CAP_PROP_FRAME_HEIGHT, 480)
+    global current_frame, current_frame_time, cap, CAMERA_SOURCE, camera_restart_flag
     while True:
-        ok, frame = cap.read()
-        if not ok:
-            time.sleep(0.05)
+        cap = cv2.VideoCapture(CAMERA_SOURCE)
+        # Ép camera không được lưu bộ đệm (giảm độ trễ/delay hình ảnh về 0)
+        cap.set(cv2.CAP_PROP_BUFFERSIZE, 1)
+        if not cap.isOpened(): 
+            time.sleep(1)
             continue
-        with frame_lock:
-            current_frame = frame
-            current_frame_time = time.time()
-    cap.release()
+        cap.set(cv2.CAP_PROP_FRAME_WIDTH, 640)
+        cap.set(cv2.CAP_PROP_FRAME_HEIGHT, 480)
+        
+        while not camera_restart_flag:
+            ok, frame = cap.read()
+            if not ok:
+                time.sleep(0.05)
+                continue
+            with frame_lock:
+                current_frame = frame
+                current_frame_time = time.time()
+                
+        cap.release()
+        camera_restart_flag = False
 
 
 def grab_frame():
@@ -266,13 +299,13 @@ def gen_frames():
 
         # Vẽ đè các khuôn mặt đã nhận diện (nếu dữ liệu chưa quá cũ)
         with faces_lock:
-            if now - latest_faces_time < 0.6:  # Giữ khung 0.6s để chống nháy
+            if now - latest_faces_time < 1.5:  # Tăng thời gian giữ khung lên 1.5s để chống nháy
                 for (left, top, right, bottom, name, color) in latest_faces:
-                    # Viền nhỏ (độ dày 1)
-                    cv2.rectangle(display_frame, (left, top), (right, bottom), color, 1)
+                    # Viền rõ nét hơn (độ dày 2)
+                    cv2.rectangle(display_frame, (left, top), (right, bottom), color, 2)
                     y = top - 15 if top - 15 > 15 else top + 15
-                    # Font chữ nhỏ gọn hơn (0.6, độ dày 1)
-                    cv2.putText(display_frame, name, (left, y), cv2.FONT_HERSHEY_SIMPLEX, 0.6, color, 1)
+                    # Font chữ rõ hơn
+                    cv2.putText(display_frame, name, (left, y), cv2.FONT_HERSHEY_SIMPLEX, 0.7, color, 2)
 
         ret, jpeg = cv2.imencode(".jpg", display_frame, [cv2.IMWRITE_JPEG_QUALITY, 70])
         if not ret:
@@ -338,12 +371,14 @@ def recognizer_loop():
             time.sleep(0.05)
             continue
 
-        # Tối ưu siêu tốc: Thu nhỏ ảnh còn 1/2 để AI dò tìm khuôn mặt nhanh gấp 4 lần
-        small_frame = cv2.resize(frame, (0, 0), fx=0.5, fy=0.5)
+        # Chống ngược sáng bằng cách tăng sáng cơ bản
+        enhanced_frame = enhance_image(frame)
+
+        # Thu nhỏ ảnh để tìm khuôn mặt nhanh và chính xác hơn với HOG
+        small_frame = cv2.resize(enhanced_frame, (0, 0), fx=0.5, fy=0.5)
         rgb_small = cv2.cvtColor(small_frame, cv2.COLOR_BGR2RGB)
         rgb_small = np.ascontiguousarray(rgb_small, dtype=np.uint8)
-
-        # 1. Dò tìm vị trí khuôn mặt trên ảnh nhỏ (Chạy RẤT NHANH ~30ms)
+        
         boxes_small = face_recognition.face_locations(rgb_small, model="hog")
         scaled_boxes = [(t*2, r*2, b*2, l*2) for (t, r, b, l) in boxes_small]
 
@@ -361,9 +396,9 @@ def recognizer_loop():
 
             new_tracked = []
             for i, (box, enc) in enumerate(zip(scaled_boxes, encodings)):
-                # Đặc thù thư viện Dlib hay nhận nhầm người Châu Á nếu để mức > 0.4
-                # Hạ ngưỡng Tolerance xuống 0.38 (cực kỳ khắt khe) để loại bỏ 100% người lạ
-                matches = face_recognition.compare_faces(known_encodings, enc, tolerance=0.38)
+                # Ngưỡng (tolerance) mặc định là 0.6, giảm xuống 0.45 để cân bằng giữa
+                # việc nhận ra người quen và không nhận nhầm người lạ.
+                matches = face_recognition.compare_faces(known_encodings, enc, tolerance=0.45)
                 name = "Nguoi La"
                 student_id = "UNKNOWN"
                 dists = face_recognition.face_distance(known_encodings, enc)
@@ -385,11 +420,33 @@ def recognizer_loop():
                 cd = cooldown if name != "Nguoi La" else stranger_cooldown
                 last = last_publish.get(key, 0)
                 if now - last >= cd:
+                    # CẮT ẢNH KHUÔN MẶT ĐỂ HIỂN THỊ LÊN WEB
+                    padding = 30
+                    fh, fw, _ = frame.shape
+                    pt = max(0, t - padding)
+                    pb = min(fh, b + padding)
+                    pl = max(0, l - padding)
+                    pr = min(fw, r + padding)
+                    face_crop = frame[pt:pb, pl:pr]
+                    
+                    filename = f"{key}_{int(now)}.jpg"
+                    captures_dir = os.path.join(os.path.dirname(__file__), "static", "captures")
+                    os.makedirs(captures_dir, exist_ok=True)
+                    filepath = os.path.join(captures_dir, filename)
+                    
+                    # Sửa lỗi OpenCV không lưu được ảnh trên Windows nếu đường dẫn có dấu tiếng Việt
+                    is_success, im_buf_arr = cv2.imencode(".jpg", face_crop)
+                    if is_success:
+                        with open(filepath, "wb") as f:
+                            f.write(im_buf_arr)
+                    
+                    image_url = f"/static/captures/{filename}"
+
                     if name != "Nguoi La":
-                        publish_client.publish(TOPIC_RESULT, json.dumps({"name": name, "id": student_id, "time": time_str}))
+                        publish_client.publish(TOPIC_RESULT, json.dumps({"name": name, "id": student_id, "time": time_str, "image": image_url}))
                         print(f"[RECOG] Diem danh: {name} - {student_id}")
                     else:
-                        publish_client.publish(TOPIC_ALERT, json.dumps({"status": "stranger", "time": time_str}))
+                        publish_client.publish(TOPIC_ALERT, json.dumps({"status": "stranger", "time": time_str, "image": image_url}))
                         print(f"[RECOG] CANH BAO nguoi la")
                     last_publish[key] = now
             
@@ -429,8 +486,8 @@ def recognizer_loop():
             if len(faces_to_draw) > 0:
                 latest_faces = faces_to_draw
                 latest_faces_time = now
-            elif now - latest_faces_time > 0.6:
-                # Xóa sạch nếu đã quá 0.6 giây không tìm thấy mặt nào
+            elif now - latest_faces_time > 1.5:
+                # Xóa sạch nếu đã quá 1.5 giây không tìm thấy mặt nào
                 latest_faces = []
 
         # Giảm tải CPU, nhường tài nguyên cho luồng Camera Stream chạy mượt 30FPS
@@ -526,16 +583,21 @@ def _register_worker(name, student_id, max_images):
 
             time.sleep(0.15)  # giãn cách giữa các mẫu để quay góc khác nhau
 
-            # Thu nhỏ ảnh để tìm khuôn mặt nhanh
-            small_frame = cv2.resize(frame, (0, 0), fx=0.5, fy=0.5)
+            time.sleep(0.15)  # giãn cách giữa các mẫu để quay góc khác nhau
+
+            # Tăng sáng để lấy nét khuôn mặt ngược sáng
+            enhanced_frame = enhance_image(frame)
+
+            # Thu nhỏ ảnh giúp thuật toán HOG bỏ qua nhiễu và tìm mặt dễ hơn
+            small_frame = cv2.resize(enhanced_frame, (0, 0), fx=0.5, fy=0.5)
             rgb_small = cv2.cvtColor(small_frame, cv2.COLOR_BGR2RGB)
             rgb_small = np.ascontiguousarray(rgb_small, dtype=np.uint8)
             boxes_small = face_recognition.face_locations(rgb_small, model="hog")
             
             if len(boxes_small) == 1:
-                # Phóng to tọa độ lên để tiến hành trích xuất nhân dạng trên ảnh gốc
                 scaled_boxes = [(t*2, r*2, b*2, l*2) for (t, r, b, l) in boxes_small]
-                rgb_full = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
+                
+                rgb_full = cv2.cvtColor(enhanced_frame, cv2.COLOR_BGR2RGB)
                 rgb_full = np.ascontiguousarray(rgb_full, dtype=np.uint8)
                 
                 feats = face_recognition.face_encodings(rgb_full, scaled_boxes)
@@ -723,7 +785,21 @@ def api_status():
         "backend_url": BACKEND_URL,
         "recognizer": recog,
         "has_face_data": os.path.exists(ENCODING_FILE),
+        "camera_source": CAMERA_SOURCE
     })
+
+
+@app.route("/api/camera", methods=["POST"])
+def api_set_camera():
+    global CAMERA_SOURCE, camera_restart_flag
+    body = request.get_json(silent=True) or {}
+    try:
+        source = int(body.get("source", 0))
+    except ValueError:
+        source = 0
+    CAMERA_SOURCE = source
+    camera_restart_flag = True
+    return jsonify({"ok": True, "message": f"Đã chuyển sang Camera {source}"})
 
 
 @app.route("/api/recognizer", methods=["POST"])

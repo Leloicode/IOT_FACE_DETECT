@@ -2,12 +2,11 @@
 #include <PubSubClient.h>
 #include <LiquidCrystal_I2C.h>
 #include <ArduinoJson.h>
+#include <WiFiManager.h> // Thêm thư viện WiFiManager
 
 // ============================================================
-// Cấu hình WiFi
+// Cấu hình WiFi (Đã chuyển sang WiFiManager, không cần hardcode)
 // ============================================================
-const char* ssid = "YOUR_WIFI_SSID";
-const char* password = "YOUR_WIFI_PASSWORD";
 
 // ============================================================
 // Cấu hình MQTT
@@ -128,24 +127,45 @@ void callback(char* topic, byte* payload, unsigned int length) {
 }
 
 // ============================================================
-// WiFi
+// WiFi (Sử dụng WiFiManager để kết nối tự động/phát WiFi)
 // ============================================================
 void setup_wifi() {
-  delay(10);
   Serial.println();
-  Serial.print("Dang ket noi WiFi: ");
-  Serial.println(ssid);
+  Serial.println("Dang khoi dong WiFiManager...");
 
-  WiFi.mode(WIFI_STA);
-  WiFi.begin(ssid, password);
+  // Hiển thị lên LCD hướng dẫn người dùng
+  lcd.clear();
+  lcd.setCursor(0, 0);
+  lcd.print("Dang ket noi...");
+  lcd.setCursor(0, 1);
+  lcd.print("Hoac phat WiFi");
 
-  while (WiFi.status() != WL_CONNECTED) {
-    delay(500);
-    Serial.print(".");
+  // Khởi tạo WiFiManager
+  WiFiManager wm;
+
+  // Nếu không kết nối được WiFi cũ, nó sẽ tạo mạng tên ESP32_IoT_Camera
+  // Hàm này sẽ chặn (block) cho đến khi người dùng nhập đúng WiFi qua điện thoại
+  bool res = wm.autoConnect("ESP32_IoT_Camera");
+
+  if (!res) {
+    Serial.println("Ket noi that bai! ESP se tu dong khoi dong lai.");
+    lcd.clear();
+    lcd.print("Loi ket noi!");
+    delay(3000);
+    ESP.restart();
   }
+
+  // Nếu chạy đến đây tức là đã kết nối WiFi thành công
   Serial.println("");
   Serial.print("WiFi da ket noi. IP: ");
   Serial.println(WiFi.localIP());
+
+  lcd.clear();
+  lcd.setCursor(0, 0);
+  lcd.print("WiFi OK");
+  lcd.setCursor(0, 1);
+  lcd.print(WiFi.localIP().toString().c_str());
+  delay(2000);
 }
 
 // ============================================================
@@ -237,10 +257,6 @@ void setup() {
 
   client.setServer(mqtt_server, mqtt_port);
   client.setCallback(callback);
-
-  lcd.clear();
-  lcd.print("WiFi OK");
-  delay(1000);
 }
 
 void loop() {

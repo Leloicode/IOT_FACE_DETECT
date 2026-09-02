@@ -13,12 +13,92 @@ const BACKEND_KEY = 'attendance_backend_url';
 let BACKEND_URL = localStorage.getItem(BACKEND_KEY) || 'http://localhost:5000';
 
 // ============================================================
+// LOGIN & BẢO MẬT (GOOGLE SHEETS)
+// ============================================================
+// Đã tự động điền URL Web App Google Apps Script của bạn
+const GOOGLE_SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbytui7F9qARt7BwDabZfxcsCt0sw_qCj1ICDQnmmai981HDEJ2G7VOkG3nMwJVY56Qy/exec'; 
+
+const loginOverlay = document.getElementById('login-overlay');
+const mainContainer = document.getElementById('main-app-container');
+const btnLogin = document.getElementById('btn-login');
+const loginKeyInput = document.getElementById('login-key');
+const loginError = document.getElementById('login-error');
+
+// Kiểm tra xem đã đăng nhập chưa
+const sessionKey = localStorage.getItem('is_logged_in');
+if (sessionKey === 'true') {
+    // Đã đăng nhập trong phiên này -> Bỏ qua form login
+    loginOverlay.style.display = 'none';
+    mainContainer.style.display = 'block';
+} else {
+    // Chưa đăng nhập -> Hiện form login
+    loginOverlay.classList.remove('hidden');
+}
+
+btnLogin.addEventListener('click', async () => {
+    const key = loginKeyInput.value.trim();
+    if (!key) {
+        loginError.textContent = "Vui lòng nhập mã truy cập!";
+        loginError.classList.remove('hidden');
+        return;
+    }
+
+    // Hiển thị trạng thái đang tải
+    btnLogin.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> Đang kiểm tra...';
+    btnLogin.disabled = true;
+    loginError.classList.add('hidden');
+
+    try {
+        const response = await fetch(GOOGLE_SCRIPT_URL, {
+            method: 'POST',
+            body: JSON.stringify({ key: key, hwid: 'web-dashboard' }) 
+            // Gửi chữ web-dashboard làm hwid giả để Apps Script tương thích với code cũ
+        });
+        
+        const data = await response.json();
+        
+        if (data.status === 'success') {
+            // Đăng nhập thành công
+            localStorage.setItem('is_logged_in', 'true');
+            
+            // Hiệu ứng ẩn form login
+            loginOverlay.classList.add('hidden');
+            setTimeout(() => {
+                loginOverlay.style.display = 'none';
+                mainContainer.style.display = 'block';
+            }, 500); // Đợi 0.5s cho animation mờ dần
+            
+        } else {
+            // Key sai hoặc hết hạn
+            loginError.textContent = data.message || "Key không hợp lệ hoặc đã hết hạn!";
+            loginError.classList.remove('hidden');
+        }
+    } catch (error) {
+        console.error("Lỗi xác thực:", error);
+        loginError.textContent = "Không thể kết nối đến máy chủ xác thực. Kiểm tra lại mạng hoặc URL Apps Script.";
+        loginError.classList.remove('hidden');
+    } finally {
+        // Khôi phục nút
+        btnLogin.innerHTML = '<i class="fa-solid fa-right-to-bracket"></i> Xác Thực';
+        btnLogin.disabled = false;
+    }
+});
+
+// Cho phép nhấn Enter để đăng nhập
+loginKeyInput.addEventListener('keypress', (e) => {
+    if (e.key === 'Enter') {
+        btnLogin.click();
+    }
+});
+
+// ============================================================
 // DOM
 // ============================================================
 const $ = (id) => document.getElementById(id);
 const statusBadge = $('mqtt-status');
 const backendBadge = $('backend-status');
 const attendanceBody = $('attendance-body');
+const attendanceBodyCamera = $('attendance-body-camera'); // Bảng điểm danh bên tab Camera
 const totalCountEl = $('total-count');
 const alertBox = $('alert-box');
 const alertContent = $('alert-content');
@@ -62,25 +142,51 @@ client.on('message', (topic, message) => {
 // ============================================================
 // Xử lý sự kiện
 // ============================================================
-function addAttendanceRow(name, id, time) {
-    if (attendanceCount === 0) attendanceBody.innerHTML = '';
+function addAttendanceRow(name, id, time, imageUrl) {
+    if (attendanceCount === 0) {
+        attendanceBody.innerHTML = '';
+        if (attendanceBodyCamera) attendanceBodyCamera.innerHTML = '';
+    }
 
     attendanceCount++;
     totalCountEl.textContent = `${attendanceCount} người`;
 
-    const tr = document.createElement('tr');
-    tr.className = 'new-row';
-    tr.innerHTML = `
+    // Nếu không có ảnh, dùng ảnh mặc định rỗng
+    const imgTag = imageUrl ? `<img src="${BACKEND_URL}${imageUrl}" style="width: 40px; height: 40px; border-radius: 50%; object-fit: cover; border: 2px solid #00f2fe; cursor: pointer; transition: transform 0.2s;" onmouseover="this.style.transform='scale(1.2)'" onmouseout="this.style.transform='scale(1)'" onclick="window.open('${BACKEND_URL}${imageUrl}', '_blank')">` : `<i class="fa-solid fa-user-tie" style="font-size: 24px; color: #888;"></i>`;
+
+    // --- Cập nhật bảng Dashboard chính ---
+    const tr1 = document.createElement('tr');
+    tr1.className = 'new-row';
+    tr1.innerHTML = `
         <td>${attendanceCount}</td>
+        <td style="text-align: center;">${imgTag}</td>
         <td><strong>${escapeHtml(name)}</strong></td>
         <td>${escapeHtml(id)}</td>
         <td>${escapeHtml(time)}</td>
     `;
-    attendanceBody.insertBefore(tr, attendanceBody.firstChild);
+    attendanceBody.insertBefore(tr1, attendanceBody.firstChild);
+
+    // --- Cập nhật bảng bên Tab Camera (ít cột hơn cho gọn) ---
+    if (attendanceBodyCamera) {
+        const tr2 = document.createElement('tr');
+        tr2.className = 'new-row';
+        tr2.innerHTML = `
+            <td>${attendanceCount}</td>
+            <td style="text-align: center;">${imgTag}</td>
+            <td><strong>${escapeHtml(name)}</strong></td>
+            <td>${escapeHtml(time)}</td>
+        `;
+        attendanceBodyCamera.insertBefore(tr2, attendanceBodyCamera.firstChild);
+    }
 
     // Giới hạn hiển thị 100 dòng trên bảng realtime
     while (attendanceBody.children.length > 100) {
         attendanceBody.removeChild(attendanceBody.lastChild);
+    }
+    if (attendanceBodyCamera) {
+        while (attendanceBodyCamera.children.length > 100) {
+            attendanceBodyCamera.removeChild(attendanceBodyCamera.lastChild);
+        }
     }
 }
 
@@ -89,7 +195,7 @@ let attendedToday = new Set(); // Chống hiển thị trùng lặp trên bảng
 function handleResult(data) {
     if (attendedToday.has(data.id)) return; // Bỏ qua nếu đã hiện trên bảng
     attendedToday.add(data.id);
-    addAttendanceRow(data.name, data.id, data.time);
+    addAttendanceRow(data.name, data.id, data.time, data.image);
 }
 
 function handleAlert(data) {
@@ -188,16 +294,19 @@ async function loadBackendData() {
         const tbody = $('history-body');
         tbody.innerHTML = '';
         if (!rows.length) {
-            tbody.innerHTML = '<tr class="empty-row"><td colspan="4">Chưa có dữ liệu.</td></tr>';
+            tbody.innerHTML = '<tr class="empty-row"><td colspan="5">Chưa có dữ liệu.</td></tr>';
         } else {
-            rows.forEach((r, i) => {
-                tbody.innerHTML += `
-                    <tr>
-                        <td>${i + 1}</td>
-                        <td><strong>${escapeHtml(r.name)}</strong></td>
-                        <td>${escapeHtml(r.student_id)}</td>
-                        <td>${escapeHtml(r.time)}</td>
-                    </tr>`;
+            rows.forEach((item, index) => {
+                const tr = document.createElement('tr');
+                const imgTag = item.image ? `<img src="${BACKEND_URL}${item.image}" style="width: 40px; height: 40px; border-radius: 50%; object-fit: cover; border: 2px solid #00f2fe; cursor: pointer; transition: transform 0.2s;" onmouseover="this.style.transform='scale(1.2)'" onmouseout="this.style.transform='scale(1)'" onclick="window.open('${BACKEND_URL}${item.image}', '_blank')">` : `<i class="fa-solid fa-user-tie" style="font-size: 24px; color: #888;"></i>`;
+                tr.innerHTML = `
+                    <td>${index + 1}</td>
+                    <td style="text-align: center;">${imgTag}</td>
+                    <td><strong>${escapeHtml(item.name)}</strong></td>
+                    <td>${escapeHtml(item.student_id)}</td>
+                    <td>${escapeHtml(item.time)}</td>
+                `;
+                tbody.appendChild(tr);
             });
         }
     } catch (e) {
@@ -351,6 +460,71 @@ const recogStatusEl = $('recognizer-status');
 const btnRecognizer = $('btn-toggle-recognizer');
 let recognizerOn = false;
 let recogPollTimer;
+
+async function fetchStatus() {
+    if (!BACKEND_URL) return;
+    try {
+        const res = await fetch(joinUrl(BACKEND_URL, '/api/status'));
+        const st = await res.json();
+        
+        backendBadge.className = 'status-badge connected';
+        backendBadge.innerHTML = '<i class="fa-solid fa-server"></i> Backend online';
+        
+        setRecognizerBadge(st.recognizer.running, st.recognizer.message);
+        
+        // Cập nhật giá trị camera select nếu có
+        const camSelect = $('camera-source-select');
+        if (camSelect && st.camera_source !== undefined) {
+            camSelect.value = st.camera_source;
+        }
+
+    } catch (e) {
+        backendBadge.className = 'status-badge disconnected';
+        backendBadge.innerHTML = '<i class="fa-solid fa-server"></i> Backend offline';
+    }
+}
+
+// ----------------------------------------------------------------------
+// Lưu URL và Đổi Camera
+// ----------------------------------------------------------------------
+$('btn-save-backend').addEventListener('click', () => {
+    const url = $('backend-url').value.trim();
+    localStorage.setItem(BACKEND_KEY, url);
+    BACKEND_URL = url;
+    alert('Đã lưu URL! Đang kết nối lại...');
+    initApp();
+});
+
+const btnSetCamera = $('btn-set-camera');
+if (btnSetCamera) {
+    btnSetCamera.addEventListener('click', async () => {
+        if (!BACKEND_URL) {
+            alert('Vui lòng cấu hình Backend URL trước.');
+            return;
+        }
+        const source = $('camera-source-select').value;
+        try {
+            const res = await fetch(joinUrl(BACKEND_URL, '/api/camera'), {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ source: parseInt(source) }),
+            });
+            const data = await res.json();
+            if (data.ok) {
+                alert(data.message);
+                // Khởi động lại luồng video nếu đang ở tab camera
+                if (cameraInterval) {
+                    toggleCamera(); // Tắt
+                    setTimeout(toggleCamera, 1500); // Bật lại sau 1.5s
+                }
+            } else {
+                alert('Lỗi: ' + data.error);
+            }
+        } catch (e) {
+            alert('Không kết nối được với Backend: ' + e.message);
+        }
+    });
+}
 
 function setRecognizerBadge(running, message) {
     recognizerOn = running;

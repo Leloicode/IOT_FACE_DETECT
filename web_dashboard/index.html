@@ -17,7 +17,26 @@
 <body>
     <div class="background-animation"></div>
 
-    <div class="container">
+    <!-- ======== LOGIN OVERLAY ======== -->
+    <div id="login-overlay" class="login-overlay">
+        <div class="login-box glass-panel">
+            <div class="login-header">
+                <i class="fa-solid fa-lock"></i>
+                <h2>Xác Thực Truy Cập</h2>
+                <p>Vui lòng nhập mã truy cập để vào hệ thống</p>
+            </div>
+            <div class="login-form">
+                <input type="password" id="login-key" placeholder="Nhập Key của bạn..." autocomplete="off">
+                <button id="btn-login" class="btn btn-primary">
+                    <i class="fa-solid fa-right-to-bracket"></i> Xác Thực
+                </button>
+                <div id="login-error" class="login-error hidden">Key không hợp lệ hoặc đã hết hạn!</div>
+            </div>
+        </div>
+    </div>
+    <!-- ================================= -->
+
+    <div class="container" id="main-app-container" style="display: none;">
         <header class="glass-panel">
             <div class="header-content">
                 <div class="logo">
@@ -58,8 +77,9 @@
                                 <thead>
                                     <tr>
                                         <th>STT</th>
-                                        <th>Họ và Tên</th>
-                                        <th>MSSV</th>
+                                        <th>Ảnh</th>
+                                        <th>Họ Tên</th>
+                                        <th>Mã Số SV</th>
                                         <th>Thời Gian</th>
                                     </tr>
                                 </thead>
@@ -102,26 +122,51 @@
 
             <!-- ======== TAB: CAMERA ======== -->
             <section id="tab-camera" class="tab-content">
-                <div class="panel glass-panel camera-panel">
-                    <div class="panel-header">
-                        <h2><i class="fa-solid fa-video"></i> Giám Sát Camera &amp; Nhận Diện</h2>
-                        <div class="camera-controls">
-                            <span id="recognizer-status" class="status-badge disconnected">
-                                <i class="fa-solid fa-robot"></i> Nhận diện: tắt
-                            </span>
-                            <button id="btn-toggle-recognizer" class="btn btn-primary">
-                                <i class="fa-solid fa-face-smile"></i> Bật Nhận Diện
-                            </button>
-                            <button id="btn-toggle-camera" class="btn btn-secondary">
-                                <i class="fa-solid fa-play"></i> Bật Camera
-                            </button>
+                <div class="dashboard-grid">
+                    <!-- Cột trái: Camera -->
+                    <div class="panel glass-panel camera-panel">
+                        <div class="panel-header" style="flex-wrap: wrap; gap: 15px;">
+                            <h2 style="margin: 0; min-width: 200px;"><i class="fa-solid fa-video"></i> Camera Nhận Diện</h2>
+                            <div class="camera-controls" style="display: flex; gap: 10px; align-items: center; flex-wrap: wrap; margin-left: auto;">
+                                <span id="recognizer-status" class="status-badge disconnected">
+                                    <i class="fa-solid fa-robot"></i> Nhận diện: tắt
+                                </span>
+                                <button id="btn-toggle-recognizer" class="btn btn-primary">
+                                    <i class="fa-solid fa-face-smile"></i> Bật Nhận Diện
+                                </button>
+                                <button id="btn-toggle-camera" class="btn btn-secondary">
+                                    <i class="fa-solid fa-play"></i> Bật Camera
+                                </button>
+                            </div>
+                        </div>
+                        <div class="camera-viewer" id="camera-viewer">
+                            <div class="camera-placeholder">
+                                <i class="fa-solid fa-video-slash"></i>
+                                <p>Camera chưa bật.</p>
+                                <p class="hint">Bật camera, sau đó nhấn "Bật Nhận Diện" để điểm danh tự động.<br>Khuôn mặt được nhận diện ngay trên video stream.</p>
+                            </div>
                         </div>
                     </div>
-                    <div class="camera-viewer" id="camera-viewer">
-                        <div class="camera-placeholder">
-                            <i class="fa-solid fa-video-slash"></i>
-                            <p>Camera chưa bật.</p>
-                            <p class="hint">Bật camera, sau đó nhấn "Bật Nhận Diện" để điểm danh tự động.<br>Khuôn mặt được nhận diện ngay trên video stream.</p>
+
+                    <!-- Cột phải: Danh sách điểm danh (Camera tab) -->
+                    <div class="panel glass-panel attendance-panel">
+                        <div class="panel-header">
+                            <h2><i class="fa-solid fa-users-viewfinder"></i> Vừa Nhận Diện</h2>
+                        </div>
+                        <div class="table-container" style="max-height: 400px; overflow-y: auto;">
+                            <table id="attendance-table-camera">
+                                <thead>
+                                    <tr>
+                                        <th>STT</th>
+                                        <th>Ảnh</th>
+                                        <th>Họ Tên</th>
+                                        <th>Thời Gian</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="attendance-body-camera">
+                                    <tr class="empty-row"><td colspan="4">Chưa có ai...</td></tr>
+                                </tbody>
+                            </table>
                         </div>
                     </div>
                 </div>
@@ -158,7 +203,7 @@
                             <p id="reg-count" class="reg-count"></p>
 
                             <!-- Luồng Camera soi gương lúc đăng ký -->
-                            <div id="reg-camera-viewer" style="margin-top: 15px; text-align: center; border-radius: 8px; overflow: hidden; max-height: 250px; background: #000;">
+                            <div id="reg-camera-viewer" style="margin-top: 15px; text-align: center; border-radius: 8px; overflow: hidden; background: #000;">
                                 <!-- Sẽ được JS chèn thẻ img mjpeg stream vào đây khi bắt đầu đăng ký -->
                             </div>
                         </div>
@@ -200,13 +245,14 @@
                             <thead>
                                 <tr>
                                     <th>STT</th>
-                                    <th>Họ và Tên</th>
-                                    <th>MSSV</th>
+                                    <th>Ảnh</th>
+                                    <th>Họ Tên</th>
+                                    <th>Mã Số SV</th>
                                     <th>Thời Gian</th>
                                 </tr>
                             </thead>
                             <tbody id="history-body">
-                                <tr class="empty-row"><td colspan="4">Đang tải lịch sử từ backend...</td></tr>
+                                <tr class="empty-row"><td colspan="5">Đang tải lịch sử từ backend...</td></tr>
                             </tbody>
                         </table>
                     </div>
@@ -265,6 +311,20 @@
                             Frontend (Vercel) cần biết địa chỉ backend để đọc lịch sử &amp; stream camera.
                             Nếu máy local không public, dùng ngrok/cloudflared hoặc để rỗng (chỉ dùng MQTT realtime).
                         </p>
+
+                        <div class="form-group" style="margin-top: 2rem;">
+                            <label><i class="fa-solid fa-camera"></i> Chọn Camera (Dành cho Backend)</label>
+                            <div class="input-row">
+                                <select id="camera-source-select" class="form-control" style="flex: 1; padding: 10px; border-radius: 5px; background: rgba(0,0,0,0.5); color: #fff; border: 1px solid rgba(255,255,255,0.2);">
+                                    <option value="0">Camera số 0 (Mặc định/Laptop)</option>
+                                    <option value="1">Camera số 1 (USB Camera)</option>
+                                    <option value="2">Camera số 2 (Rời)</option>
+                                    <option value="3">Camera số 3</option>
+                                </select>
+                                <button id="btn-set-camera" class="btn btn-secondary">Áp dụng</button>
+                            </div>
+                            <small class="hint">Đổi camera xong, hệ thống sẽ mất 1-2 giây để tự khởi động lại luồng video.</small>
+                        </div>
                     </div>
                 </div>
             </section>
