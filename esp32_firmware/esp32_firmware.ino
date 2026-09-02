@@ -142,6 +142,25 @@ void setup_wifi() {
 
   // Khởi tạo WiFiManager
   WiFiManager wm;
+  
+  // Hàm này tự động được gọi khi ESP32 không tìm thấy mạng và bật chế độ phát WiFi
+  wm.setAPCallback([](WiFiManager *myWiFiManager) {
+    Serial.println("\n----------------------------------------------");
+    Serial.println(">>> DA MAT KET NOI MANG CU <<<");
+    Serial.println(">>> CHUYEN SANG CHE DO PHAT WIFI (ACCESS POINT) <<<");
+    Serial.print("1. Dung dien thoai/laptop ket noi vao WiFi ten: ");
+    Serial.println(myWiFiManager->getConfigPortalSSID());
+    Serial.println("2. Trang cai dat se tu dong hien len (hoac vao IP: 192.168.4.1)");
+    Serial.println("3. Chon WiFi nha ban va nhap Mat khau de ket noi lai!");
+    Serial.println("----------------------------------------------\n");
+    
+    // Báo lên LCD để người dùng biết phải làm gì
+    lcd.clear();
+    lcd.setCursor(0, 0);
+    lcd.print("Hay ket noi vao:");
+    lcd.setCursor(0, 1);
+    lcd.print("ESP32_IoT_Camera");
+  });
 
   // Nếu không kết nối được WiFi cũ, nó sẽ tạo mạng tên ESP32_IoT_Camera
   // Hàm này sẽ chặn (block) cho đến khi người dùng nhập đúng WiFi qua điện thoại
