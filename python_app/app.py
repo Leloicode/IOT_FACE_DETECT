@@ -742,15 +742,7 @@ def api_alerts():
     return jsonify([dict(r) for r in rows])
 
 
-@app.route("/api/controls")
-def api_controls():
-    limit = min(int(request.args.get("limit", 50)), 500)
-    conn = get_db()
-    rows = conn.execute(
-        "SELECT * FROM controls ORDER BY id DESC LIMIT ?", (limit,)
-    ).fetchall()
-    conn.close()
-    return jsonify([dict(r) for r in rows])
+
 
 
 @app.route("/api/events")
@@ -760,19 +752,7 @@ def api_events():
         return jsonify(list(latest_events))
 
 
-@app.route("/api/control", methods=["POST"])
-def api_control():
-    body = request.get_json(silent=True) or {}
-    action = body.get("action")
-    if action not in ("reset_buzzer", "open_door"):
-        return jsonify({"ok": False, "error": "Invalid action"}), 400
 
-    time_str = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
-    log_control(action, time_str)
-
-    # Gửi lệnh xuống ESP32 qua MQTT
-    publish_client.publish(TOPIC_CONTROL, json.dumps({"action": action}))
-    return jsonify({"ok": True, "action": action})
 
 
 @app.route("/api/status")

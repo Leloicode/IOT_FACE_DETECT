@@ -201,10 +201,9 @@ function handleResult(data) {
 function handleAlert(data) {
     if (data.status === 'stranger') {
         alertBox.classList.add('active-alert');
+        const imgHtml = data.image ? `<img src="${BACKEND_URL}${data.image}" style="width: 70px; height: 70px; border-radius: 50%; object-fit: cover; border: 3px solid #e53e3e; margin-bottom: 10px; box-shadow: 0 0 15px rgba(229,62,62,0.5);">` : `<div class="icon-pulse"><i class="fa-solid fa-triangle-exclamation"></i></div>`;
         alertContent.innerHTML = `
-            <div class="icon-pulse">
-                <i class="fa-solid fa-triangle-exclamation"></i>
-            </div>
+            ${imgHtml}
             <h3>CẢNH BÁO NGƯỜI LẠ!</h3>
             <p>Phát hiện đối tượng không xác định lúc ${escapeHtml(data.time)}</p>
         `;
@@ -230,36 +229,7 @@ function escapeHtml(str) {
     }[c]));
 }
 
-// ============================================================
-// Điều khiển IoT (gửi 2 nơi: MQTT trực tiếp + API backend)
-// ============================================================
-function sendControl(action, label) {
-    const statusEl = $('iot-control-status');
-    const payload = JSON.stringify({ action });
 
-    // Gửi qua MQTT (tới ESP32)
-    if (client.connected) {
-        client.publish(TOPIC_CONTROL, payload);
-    }
-
-    // Gửi qua backend (để log lịch sử điều khiển) — nếu có backend
-    if (BACKEND_URL) {
-        fetch(joinUrl(BACKEND_URL, '/api/control'), {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: payload,
-        }).catch((err) => console.error('Backend control error:', err));
-    }
-
-    statusEl.textContent = `✅ Đã gửi lệnh "${label}" lúc ${new Date().toLocaleTimeString('vi-VN')}`;
-    statusEl.className = 'iot-command-status ok';
-    setTimeout(() => (statusEl.textContent = 'Chưa gửi lệnh.'), 4000);
-}
-
-$('btn-reset-alert').addEventListener('click', () => {
-    resetAlertUI();
-    sendControl('reset_buzzer', 'Tắt còi báo động');
-});
 
 // ============================================================
 // Backend API helpers
@@ -320,13 +290,15 @@ async function loadBackendData() {
         const tbody = $('alerts-body');
         tbody.innerHTML = '';
         if (!rows.length) {
-            tbody.innerHTML = '<tr class="empty-row"><td colspan="3">Chưa có dữ liệu.</td></tr>';
+            tbody.innerHTML = '<tr class="empty-row"><td colspan="4">Chưa có dữ liệu.</td></tr>';
         } else {
             rows.forEach((r, i) => {
                 const statusText = r.status === 'stranger' ? 'Người lạ' : r.status;
+                const imgTag = r.image ? `<img src="${BACKEND_URL}${r.image}" style="width: 40px; height: 40px; border-radius: 50%; object-fit: cover; border: 2px solid #e53e3e; cursor: pointer; transition: transform 0.2s;" onmouseover="this.style.transform='scale(1.2)'" onmouseout="this.style.transform='scale(1)'" onclick="window.open('${BACKEND_URL}${r.image}', '_blank')">` : `<i class="fa-solid fa-user-secret" style="font-size: 24px; color: #e53e3e;"></i>`;
                 tbody.innerHTML += `
                     <tr>
                         <td>${i + 1}</td>
+                        <td style="text-align: center;">${imgTag}</td>
                         <td><span class="alert-tag">${escapeHtml(statusText)}</span></td>
                         <td>${escapeHtml(r.time)}</td>
                     </tr>`;
@@ -336,28 +308,7 @@ async function loadBackendData() {
         console.error('Load alert history error:', e);
     }
 
-    // Lịch sử điều khiển IoT
-    try {
-        const res = await fetch(joinUrl(base, '/api/controls?limit=100'));
-        const rows = await res.json();
-        const tbody = $('controls-body');
-        tbody.innerHTML = '';
-        if (!rows.length) {
-            tbody.innerHTML = '<tr class="empty-row"><td colspan="3">Chưa có dữ liệu.</td></tr>';
-        } else {
-            rows.forEach((r, i) => {
-                const actionText = r.action === 'reset_buzzer' ? 'Tắt còi báo động' : r.action;
-                tbody.innerHTML += `
-                    <tr>
-                        <td>${i + 1}</td>
-                        <td><span class="alert-tag" style="background:var(--primary); color:white">${escapeHtml(actionText)}</span></td>
-                        <td>${escapeHtml(r.time)}</td>
-                    </tr>`;
-            });
-        }
-    } catch (e) {
-        console.error('Load controls history error:', e);
-    }
+
     
     // Tải danh sách nhân viên đã đăng ký
     loadEmployees();

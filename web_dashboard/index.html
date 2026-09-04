@@ -59,7 +59,7 @@
             </div>
             <!-- Tab nav -->
             <nav class="tab-nav">
-                <button class="tab-btn active" data-tab="dashboard"><i class="fa-solid fa-gauge-high"></i> Bảng Điều Khiển</button>
+                <button class="tab-btn active" data-tab="dashboard"><i class="fa-solid fa-gauge-high"></i> Tổng Quan</button>
                 <button class="tab-btn" data-tab="camera"><i class="fa-solid fa-video"></i> Camera</button>
                 <button class="tab-btn" data-tab="register"><i class="fa-solid fa-user-plus"></i> Đăng Ký Nhân Viên</button>
                 <button class="tab-btn" data-tab="history"><i class="fa-solid fa-clock-rotate-left"></i> Lịch Sử</button>
@@ -110,17 +110,7 @@
                             </div>
                         </div>
 
-                        <div class="panel glass-panel control-panel">
-                            <div class="panel-header">
-                                <h2><i class="fa-solid fa-sliders"></i> Điều Khiển IoT</h2>
-                            </div>
-                            <div id="iot-control-status" class="iot-command-status">Chưa gửi lệnh.</div>
-                            <div class="control-actions">
-                                <button id="btn-reset-alert" class="btn btn-secondary">
-                                    <i class="fa-solid fa-volume-xmark"></i> Tắt Còi Báo Động
-                                </button>
-                            </div>
-                        </div>
+
                     </div>
                 </div>
             </section>
@@ -270,33 +260,18 @@
                             <thead>
                                 <tr>
                                     <th>STT</th>
+                                    <th>Ảnh</th>
                                     <th>Trạng Thái</th>
                                     <th>Thời Gian</th>
                                 </tr>
                             </thead>
                             <tbody id="alerts-body">
-                                <tr class="empty-row"><td colspan="3">Đang tải lịch sử từ backend...</td></tr>
+                                <tr class="empty-row"><td colspan="4">Đang tải lịch sử từ backend...</td></tr>
                             </tbody>
                         </table>
                     </div>
 
-                    <div class="panel-header" style="margin-top:2rem">
-                        <h2><i class="fa-solid fa-sliders"></i> Lịch Sử Điều Khiển IoT (ESP32)</h2>
-                    </div>
-                    <div class="table-container">
-                        <table id="controls-table">
-                            <thead>
-                                <tr>
-                                    <th>STT</th>
-                                    <th>Lệnh Gửi (Action)</th>
-                                    <th>Thời Gian</th>
-                                </tr>
-                            </thead>
-                            <tbody id="controls-body">
-                                <tr class="empty-row"><td colspan="3">Đang tải lịch sử từ backend...</td></tr>
-                            </tbody>
-                        </table>
-                    </div>
+
                 </div>
             </section>
 

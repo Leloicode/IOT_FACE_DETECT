@@ -17,7 +17,7 @@ const int mqtt_port = 1883;
 
 const char* topic_result   = "iot_camera/attendance/result";
 const char* topic_alert    = "iot_camera/attendance/alert";
-const char* topic_control  = "iot_camera/attendance/control";
+
 const char* topic_status   = "iot_camera/attendance/status";
 
 WiFiClient espClient;
@@ -114,16 +114,6 @@ void callback(char* topic, byte* payload, unsigned int length) {
       ledHigh = true;
       ledToggleMs = millis() + 5000;
       Serial.println("[LCD] CANH BAO NGUOI LA - BAT LED DO");
-    }
-  }
-  else if (t == String(topic_control)) {
-    const char* action = doc["action"] | "";
-    if (strcmp(action, "reset_buzzer") == 0) {
-      digitalWrite(BUZZER_PIN, LOW);
-      buzzerHigh = false;
-      showLcd("Bao dong da tat", "He thong binh thuong", DISPLAY_RESET);
-      Serial.println("[LCD] Tat coi bao dong");
-    }
   }
 }
 
@@ -201,7 +191,7 @@ void reconnect() {
       Serial.println(" Da ket noi!");
       client.subscribe(topic_result);
       client.subscribe(topic_alert);
-      client.subscribe(topic_control);
+
 
       // Thông báo trạng thái online lên broker để backend/web biết
       JsonDocument st;
