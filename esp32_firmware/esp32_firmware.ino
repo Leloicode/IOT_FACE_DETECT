@@ -1,5 +1,6 @@
 #include <WiFi.h>
 #include <PubSubClient.h>
+#include <Wire.h>
 #include <LiquidCrystal_I2C.h>
 #include <ArduinoJson.h>
 #include <WiFiManager.h> // Thêm thư viện WiFiManager
@@ -265,6 +266,7 @@ void setup() {
   pinMode(LED_GREEN_PIN, OUTPUT);
   digitalWrite(LED_GREEN_PIN, LOW);
 
+  Wire.begin(21, 22); // Khởi tạo chuẩn I2C tại chân SDA=21, SCL=22
   lcd.init();
   lcd.backlight();
   lcd.setCursor(0, 0);
