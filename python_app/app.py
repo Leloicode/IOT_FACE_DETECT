@@ -242,8 +242,8 @@ def camera_reader():
     """Đọc liên tục từ camera vào buffer. Chạy nền, không chặn stream."""
     global current_frame, current_frame_time, cap, CAMERA_SOURCE, camera_restart_flag
     while True:
-        # Sử dụng cv2.CAP_DSHOW để ép dùng DirectShow trên Windows, sửa lỗi "obsensor... Camera index out of range"
-        cap = cv2.VideoCapture(CAMERA_SOURCE, cv2.CAP_DSHOW)
+        # Sử dụng cv2.CAP_MSMF (Media Foundation) thay cho DSHOW để tránh lỗi capture by index
+        cap = cv2.VideoCapture(CAMERA_SOURCE, cv2.CAP_MSMF)
         # Ép camera không được lưu bộ đệm (giảm độ trễ/delay hình ảnh về 0)
         cap.set(cv2.CAP_PROP_BUFFERSIZE, 1)
         if not cap.isOpened(): 
@@ -281,7 +281,16 @@ def gen_frames():
         # Luôn lấy frame mới nhất từ camera (đảm bảo độ mượt 30FPS)
         frame = grab_frame()
         if frame is None:
-            time.sleep(0.05)
+            # Tạo màn hình đen báo lỗi nếu camera không lên
+            error_img = np.zeros((480, 640, 3), dtype=np.uint8)
+            cv2.putText(error_img, "CAMERA KET NOI THAT BAI", (100, 220), cv2.FONT_HERSHEY_SIMPLEX, 1, (0, 0, 255), 3)
+            cv2.putText(error_img, "Hay kiem tra lai day cap", (130, 270), cv2.FONT_HERSHEY_SIMPLEX, 0.8, (0, 255, 255), 2)
+            cv2.putText(error_img, "Hoac doi Index khac (0, 1, 2...)", (100, 310), cv2.FONT_HERSHEY_SIMPLEX, 0.8, (0, 255, 255), 2)
+            ret, jpeg = cv2.imencode(".jpg", error_img, [cv2.IMWRITE_JPEG_QUALITY, 50])
+            if ret:
+                yield (b"--frame\r\n"
+                       b"Content-Type: image/jpeg\r\n\r\n" + jpeg.tobytes() + b"\r\n")
+            time.sleep(1.0)
             continue
             
         display_frame = frame.copy()
