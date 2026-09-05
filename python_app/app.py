@@ -26,6 +26,8 @@ os.environ["OPENBLAS_NUM_THREADS"] = "1"
 os.environ["MKL_NUM_THREADS"] = "1"
 os.environ["VECLIB_MAXIMUM_THREADS"] = "1"
 os.environ["NUMEXPR_NUM_THREADS"] = "1"
+# Ẩn các cảnh báo rác của OpenCV (như lỗi không tìm thấy index camera)
+os.environ["OPENCV_LOG_LEVEL"] = "FATAL"
 
 import cv2
 import face_recognition
@@ -242,8 +244,8 @@ def camera_reader():
     """Đọc liên tục từ camera vào buffer. Chạy nền, không chặn stream."""
     global current_frame, current_frame_time, cap, CAMERA_SOURCE, camera_restart_flag
     while True:
-        # Sử dụng cv2.CAP_MSMF (Media Foundation) thay cho DSHOW để tránh lỗi capture by index
-        cap = cv2.VideoCapture(CAMERA_SOURCE, cv2.CAP_MSMF)
+        # Xóa cờ backend, để OpenCV tự động (Auto) chọn backend tương thích nhất.
+        cap = cv2.VideoCapture(CAMERA_SOURCE)
         # Ép camera không được lưu bộ đệm (giảm độ trễ/delay hình ảnh về 0)
         cap.set(cv2.CAP_PROP_BUFFERSIZE, 1)
         if not cap.isOpened(): 
@@ -263,6 +265,10 @@ def camera_reader():
                 
         cap.release()
         camera_restart_flag = False
+        
+        # Reset current_frame để luồng video_feed biết là chưa có hình từ cam mới
+        with frame_lock:
+            current_frame = None
 
 
 def grab_frame():
