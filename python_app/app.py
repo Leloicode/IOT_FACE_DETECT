@@ -242,7 +242,8 @@ def camera_reader():
     """Đọc liên tục từ camera vào buffer. Chạy nền, không chặn stream."""
     global current_frame, current_frame_time, cap, CAMERA_SOURCE, camera_restart_flag
     while True:
-        cap = cv2.VideoCapture(CAMERA_SOURCE)
+        # Sử dụng cv2.CAP_DSHOW để ép dùng DirectShow trên Windows, sửa lỗi "obsensor... Camera index out of range"
+        cap = cv2.VideoCapture(CAMERA_SOURCE, cv2.CAP_DSHOW)
         # Ép camera không được lưu bộ đệm (giảm độ trễ/delay hình ảnh về 0)
         cap.set(cv2.CAP_PROP_BUFFERSIZE, 1)
         if not cap.isOpened(): 
