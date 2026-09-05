@@ -114,6 +114,7 @@ void callback(char* topic, byte* payload, unsigned int length) {
       ledHigh = true;
       ledToggleMs = millis() + 5000;
       Serial.println("[LCD] CANH BAO NGUOI LA - BAT LED DO");
+    }
   }
 }
 
