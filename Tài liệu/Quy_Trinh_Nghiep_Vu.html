@@ -320,7 +320,40 @@
             </div>
         </div>
 
-        <!-- Luồng 4 -->
+        <!-- Luồng 4: Quản lý thiết bị (Mạng) -->
+        <div class="workflow-card" style="border-left-color: #8b5cf6;">
+            <div class="workflow-header">
+                <div class="workflow-title">
+                    <i class="fa-solid fa-wifi" style="color: #8b5cf6"></i> 
+                    Quy Trình Quản Lý Mạng Cho Thiết Bị (Reset WiFi)
+                </div>
+            </div>
+            <div class="workflow-content">
+                <div class="step">
+                    <div class="step-number" style="background: #ede9fe; color: #8b5cf6;">1</div>
+                    <div class="step-text">
+                        <strong>Gửi lệnh từ xa</strong>
+                        <p>Quản trị viên bấm nút "Reset WiFi" trên Web Dashboard để gửi lệnh qua mạng MQTT xuống mạch ESP32.</p>
+                    </div>
+                </div>
+                <div class="step">
+                    <div class="step-number" style="background: #ede9fe; color: #8b5cf6;">2</div>
+                    <div class="step-text">
+                        <strong>Thiết bị phản hồi</strong>
+                        <p>ESP32 nhận lệnh, hiển thị thông báo "Resetting WiFi", xóa bộ nhớ WiFi cũ và tự khởi động lại.</p>
+                    </div>
+                </div>
+                <div class="step">
+                    <div class="step-number" style="background: #ede9fe; color: #8b5cf6;">3</div>
+                    <div class="step-text">
+                        <strong>Cài đặt mạng mới</strong>
+                        <p>Thiết bị tự động chuyển thành Trạm phát WiFi (Tên: ESP32_IoT_Camera). Người dùng kết nối vào WiFi này để cài đặt mạng mới, giúp thiết bị trực tuyến trở lại.</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Luồng 5 -->
         <div class="workflow-card admin">
             <div class="workflow-header">
                 <div class="workflow-title">

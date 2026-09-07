@@ -4,6 +4,9 @@
 #include <LiquidCrystal_I2C.h>
 #include <ArduinoJson.h>
 #include <WiFiManager.h> // Thêm thư viện WiFiManager
+#include <Ticker.h>      // Thêm thư viện Ticker để chạy ngầm còi báo
+
+Ticker buzzerTicker;
 
 // ============================================================
 // Cấu hình WiFi (Đã chuyển sang WiFiManager, không cần hardcode)
@@ -17,6 +20,7 @@ const int mqtt_port = 1883;
 
 const char* topic_result   = "iot_camera/attendance/result";
 const char* topic_alert    = "iot_camera/attendance/alert";
+const char* topic_control  = "iot_camera/attendance/control"; // Topic nhận lệnh điều khiển (từ web)
 
 const char* topic_status   = "iot_camera/attendance/status";
 
@@ -116,6 +120,26 @@ void callback(char* topic, byte* payload, unsigned int length) {
       Serial.println("[LCD] CANH BAO NGUOI LA - BAT LED DO");
     }
   }
+  else if (t == String(topic_control)) {
+    const char* command = doc["command"] | "";
+    if (strcmp(command, "reset_wifi") == 0) {
+      Serial.println("Nhan lenh RESET WIFI tu Web/App! Dang xoa WiFi...");
+      showLcd("Resetting WiFi", "Vui long doi...", DISPLAY_RESET);
+      
+      // Báo còi 5 tiếng bíp ngắn liên tục để xác nhận lệnh
+      for(int i = 0; i < 5; i++) {
+        digitalWrite(BUZZER_PIN, HIGH);
+        delay(100);
+        digitalWrite(BUZZER_PIN, LOW);
+        delay(100);
+      }
+      delay(1000); // Dừng 1 giây để màn hình hiển thị rõ trước khi khởi động lại
+
+      WiFiManager wm;
+      wm.resetSettings(); // Xóa thông tin WiFi hiện tại
+      ESP.restart();      // Khởi động lại mạch
+    }
+  }
 }
 
 // ============================================================
@@ -149,14 +173,23 @@ void setup_wifi() {
     // Báo lên LCD để người dùng biết phải làm gì
     lcd.clear();
     lcd.setCursor(0, 0);
-    lcd.print("Hay ket noi vao:");
+    lcd.print("Vao WiFi de cai:"); // Tối ưu nội dung 16 ký tự
     lcd.setCursor(0, 1);
     lcd.print("ESP32_IoT_Camera");
+
+    // Bật còi báo liên hồi (kêu ngắt quãng 0.5s) báo hiệu đang ở chế độ chờ cài đặt
+    buzzerTicker.attach(0.5, []() {
+      digitalWrite(BUZZER_PIN, !digitalRead(BUZZER_PIN));
+    });
   });
 
   // Nếu không kết nối được WiFi cũ, nó sẽ tạo mạng tên ESP32_IoT_Camera
   // Hàm này sẽ chặn (block) cho đến khi người dùng nhập đúng WiFi qua điện thoại
   bool res = wm.autoConnect("ESP32_IoT_Camera");
+
+  // Tắt còi báo liên hồi khi đã cấu hình mạng xong
+  buzzerTicker.detach();
+  digitalWrite(BUZZER_PIN, LOW);
 
   if (!res) {
     Serial.println("Ket noi that bai! ESP se tu dong khoi dong lai.");
@@ -192,7 +225,7 @@ void reconnect() {
       Serial.println(" Da ket noi!");
       client.subscribe(topic_result);
       client.subscribe(topic_alert);
-
+      client.subscribe(topic_control); // Lắng nghe lệnh điều khiển
 
       // Thông báo trạng thái online lên broker để backend/web biết
       JsonDocument st;

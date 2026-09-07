@@ -677,6 +677,25 @@ $('btn-save-backend').addEventListener('click', () => {
 });
 
 // ============================================================
+// Reset WiFi ESP32 qua MQTT
+// ============================================================
+const btnResetWifi = $('btn-reset-wifi');
+if (btnResetWifi) {
+    btnResetWifi.addEventListener('click', () => {
+        if (!confirm('Bạn có chắc chắn muốn XÓA cấu hình WiFi hiện tại của mạch ESP32 không?\nMạch sẽ ngắt kết nối và phát ra mạng WiFi tên ESP32_IoT_Camera để bạn cài đặt lại.')) {
+            return;
+        }
+        if (client && client.connected) {
+            const payload = JSON.stringify({ command: 'reset_wifi' });
+            client.publish(TOPIC_CONTROL, payload);
+            alert('Đã gửi lệnh Reset WiFi xuống mạch ESP32 thành công!');
+        } else {
+            alert('Lỗi: Chưa kết nối được tới MQTT Broker. Vui lòng kiểm tra lại mạng hoặc tải lại trang.');
+        }
+    });
+}
+
+// ============================================================
 // Tải backend lịch sử lúc khởi động
 // ============================================================
 $('backend-url').value = BACKEND_URL;

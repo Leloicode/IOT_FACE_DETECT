@@ -86,7 +86,7 @@ Trạm IoT được xây dựng dựa trên các linh kiện:
 Các chủ đề (Topics) được định nghĩa để trao đổi dữ liệu:
 - `iot_camera/attendance/result`: Backend gửi dữ liệu nhận diện thành công (Payload JSON: `{"name": "Nguyen Van A", "time": "08:00:00"}`).
 - `iot_camera/attendance/alert`: Backend gửi tín hiệu cảnh báo người lạ (Payload JSON: `{"status": "stranger"}`).
-- `iot_camera/attendance/control`: Web Dashboard gửi lệnh điều khiển phần cứng từ xa (VD: tắt còi báo động khẩn cấp).
+- `iot_camera/attendance/control`: Web Dashboard gửi lệnh điều khiển phần cứng từ xa (VD: Lệnh Xóa cấu hình WiFi `{"command": "reset_wifi"}` cho phép ESP32 tự động ngắt kết nối và phát ra mạng WiFi Access Point để người dùng cài đặt lại mạng mới mà không cần thao tác vật lý trên mạch).
 
 ---
 
@@ -94,7 +94,7 @@ Các chủ đề (Topics) được định nghĩa để trao đổi dữ liệu:
 
 ### 4.1 Quá trình triển khai
 - **Phần mềm:** Cài đặt môi trường Python 3.11, tải các thư viện dlib, opencv-python. Xây dựng cấu trúc thư mục chứa dataset hình ảnh. Giao diện Web được thiết kế theo phong cách hiện đại (Dark mode), có tính năng Responsive tương thích trên nhiều thiết bị.
-- **Phần cứng:** Thực hiện đấu nối ESP32 với module LCD I2C (Lưu ý cấp nguồn 5V từ chân VIN cho LCD để đảm bảo độ sáng). Nạp firmware C++ thông qua Arduino IDE. Hệ thống sử dụng thư viện WiFiManager để cho phép người dùng dễ dàng cấu hình WiFi cho ESP32 qua điện thoại mà không cần lập trình lại.
+- **Phần cứng:** Thực hiện đấu nối ESP32 với module LCD I2C (Lưu ý cấp nguồn 5V từ chân VIN cho LCD để đảm bảo độ sáng). Nạp firmware C++ thông qua Arduino IDE. Hệ thống sử dụng thư viện WiFiManager để cho phép người dùng dễ dàng cấu hình WiFi cho ESP32 qua điện thoại. Nếu mất kết nối, mạch tự động phát WiFi (`ESP32_IoT_Camera`) để chờ cài đặt lại. Đặc biệt, hệ thống hỗ trợ tính năng "Reset WiFi" từ xa qua giao diện Web Dashboard bằng bản tin MQTT. Khi nhận lệnh, ESP32 tự động xóa cấu hình mạng cũ và khởi động lại vào chế độ cài đặt mạng mới một cách tự động, an toàn và tiện lợi.
 
 ### 4.2 Kịch bản kiểm thử (Test cases)
 - **Kịch bản 1 - Nhận diện nhân viên hợp lệ:** Đứng trước camera, hệ thống mất khoảng 0.2s để nhận diện. Tên nhân viên lập tức xuất hiện trên luồng Video Web, đồng thời ESP32 nhận lệnh làm màn hình LCD sáng lên hiển thị dòng chữ "Xin chao: [Tên]", còi kêu 1 tiếng bíp, đèn LED xanh sáng.
