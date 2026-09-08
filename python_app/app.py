@@ -244,8 +244,14 @@ def camera_reader():
     """Đọc liên tục từ camera vào buffer. Chạy nền, không chặn stream."""
     global current_frame, current_frame_time, cap, CAMERA_SOURCE, camera_restart_flag
     while True:
-        # Xóa cờ backend, để OpenCV tự động (Auto) chọn backend tương thích nhất.
-        cap = cv2.VideoCapture(CAMERA_SOURCE)
+        if camera_restart_flag:
+            camera_restart_flag = False
+            
+        # Sửa lỗi: Thêm cv2.CAP_DSHOW để khắc phục lỗi không mở được camera trên một số dòng Windows
+        if isinstance(CAMERA_SOURCE, int):
+            cap = cv2.VideoCapture(CAMERA_SOURCE, cv2.CAP_DSHOW)
+        else:
+            cap = cv2.VideoCapture(CAMERA_SOURCE)
         # Ép camera không được lưu bộ đệm (giảm độ trễ/delay hình ảnh về 0)
         cap.set(cv2.CAP_PROP_BUFFERSIZE, 1)
         if not cap.isOpened(): 
@@ -254,17 +260,24 @@ def camera_reader():
         cap.set(cv2.CAP_PROP_FRAME_WIDTH, 640)
         cap.set(cv2.CAP_PROP_FRAME_HEIGHT, 480)
         
+        fail_count = 0
         while not camera_restart_flag:
             ok, frame = cap.read()
             if not ok:
+                fail_count += 1
+                if fail_count > 20: # Nếu lỗi liên tục 20 lần (khoảng 1 giây), coi như mất kết nối -> Khởi động lại camera
+                    break
                 time.sleep(0.05)
                 continue
+            
+            # Đã đọc thành công, reset fail_count
+            fail_count = 0
             with frame_lock:
                 current_frame = frame
                 current_frame_time = time.time()
                 
         cap.release()
-        camera_restart_flag = False
+        # camera_restart_flag = False (đã chuyển lên đầu vòng lặp)
         
         # Reset current_frame để luồng video_feed biết là chưa có hình từ cam mới
         with frame_lock:
@@ -287,16 +300,16 @@ def gen_frames():
         # Luôn lấy frame mới nhất từ camera (đảm bảo độ mượt 30FPS)
         frame = grab_frame()
         if frame is None:
-            # Tạo màn hình đen báo lỗi nếu camera không lên
+            # Tạo màn hình đen thông báo đang kết nối
             error_img = np.zeros((480, 640, 3), dtype=np.uint8)
-            cv2.putText(error_img, "CAMERA KET NOI THAT BAI", (100, 220), cv2.FONT_HERSHEY_SIMPLEX, 1, (0, 0, 255), 3)
-            cv2.putText(error_img, "Hay kiem tra lai day cap", (130, 270), cv2.FONT_HERSHEY_SIMPLEX, 0.8, (0, 255, 255), 2)
-            cv2.putText(error_img, "Hoac doi Index khac (0, 1, 2...)", (100, 310), cv2.FONT_HERSHEY_SIMPLEX, 0.8, (0, 255, 255), 2)
+            cv2.putText(error_img, "DANG KET NOI CAMERA...", (110, 220), cv2.FONT_HERSHEY_SIMPLEX, 1, (0, 255, 255), 3)
+            cv2.putText(error_img, "Vui long cho giay lat...", (180, 270), cv2.FONT_HERSHEY_SIMPLEX, 0.8, (255, 255, 255), 2)
+            cv2.putText(error_img, "Neu qua lau, hay Kiem tra lai cap hoac doi Index", (40, 310), cv2.FONT_HERSHEY_SIMPLEX, 0.7, (0, 0, 255), 2)
             ret, jpeg = cv2.imencode(".jpg", error_img, [cv2.IMWRITE_JPEG_QUALITY, 50])
             if ret:
                 yield (b"--frame\r\n"
                        b"Content-Type: image/jpeg\r\n\r\n" + jpeg.tobytes() + b"\r\n")
-            time.sleep(1.0)
+            time.sleep(0.5) # Giảm sleep để khi có frame sẽ cập nhật nhanh hơn
             continue
             
         display_frame = frame.copy()
@@ -789,13 +802,37 @@ def api_status():
 def api_set_camera():
     global CAMERA_SOURCE, camera_restart_flag
     body = request.get_json(silent=True) or {}
+    source_raw = body.get("source", 0)
+    
+    # Thử ép kiểu sang số nguyên (nếu là index 0, 1, 2)
     try:
-        source = int(body.get("source", 0))
-    except ValueError:
-        source = 0
+        source = int(source_raw)
+    except (ValueError, TypeError):
+        # Nếu không phải số, giữ nguyên chuỗi (cho URL IP Camera)
+        source = str(source_raw)
+        
     CAMERA_SOURCE = source
     camera_restart_flag = True
     return jsonify({"ok": True, "message": f"Đã chuyển sang Camera {source}"})
+
+@app.route("/api/cameras/available")
+def api_cameras_available():
+    """Quét các camera khả dụng trên máy tính (từ index 0 đến 4)."""
+    global cap, CAMERA_SOURCE
+    available = []
+    for i in range(5):
+        # Tránh xung đột phần cứng trên Windows: 
+        # Nếu camera này ĐANG được luồng chính mở, VideoCapture lần 2 sẽ báo lỗi.
+        if isinstance(CAMERA_SOURCE, int) and i == CAMERA_SOURCE:
+            if cap is not None and cap.isOpened():
+                available.append(i)
+                continue
+                
+        temp_cap = cv2.VideoCapture(i, cv2.CAP_DSHOW)
+        if temp_cap.isOpened():
+            available.append(i)
+            temp_cap.release()
+    return jsonify({"available": available})
 
 
 @app.route("/api/recognizer", methods=["POST"])

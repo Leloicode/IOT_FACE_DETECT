@@ -446,6 +446,50 @@ $('btn-save-backend').addEventListener('click', () => {
     initApp();
 });
 
+const btnScanCamera = $('btn-scan-camera');
+if (btnScanCamera) {
+    btnScanCamera.addEventListener('click', async () => {
+        if (!BACKEND_URL) {
+            alert('Vui lòng cấu hình Backend URL trước.');
+            return;
+        }
+        
+        btnScanCamera.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> Đang quét...';
+        btnScanCamera.disabled = true;
+        
+        try {
+            const res = await fetch(joinUrl(BACKEND_URL, '/api/cameras/available'));
+            const data = await res.json();
+            
+            const camSelect = $('camera-source-select');
+            if (data.available && data.available.length > 0) {
+                const currentVal = camSelect.value;
+                camSelect.innerHTML = ''; // Xóa các lựa chọn cũ
+                data.available.forEach(idx => {
+                    const opt = document.createElement('option');
+                    opt.value = idx;
+                    let name = `Camera số ${idx} (Phát hiện được)`;
+                    if (idx === 0) name = 'Camera số 0 (Laptop/Mặc định)';
+                    opt.textContent = name;
+                    camSelect.appendChild(opt);
+                });
+                // Thử giữ lại lựa chọn cũ nếu nó tồn tại trong danh sách mới
+                if (data.available.includes(parseInt(currentVal))) {
+                    camSelect.value = currentVal;
+                }
+                alert(`Tìm thấy ${data.available.length} camera khả dụng!`);
+            } else {
+                alert('Không tìm thấy camera nào đang cắm. Vui lòng kiểm tra cáp USB hoặc trình điều khiển.');
+            }
+        } catch (e) {
+            alert('Lỗi kết nối khi quét camera: ' + e.message);
+        } finally {
+            btnScanCamera.innerHTML = '<i class="fa-solid fa-magnifying-glass"></i> Quét';
+            btnScanCamera.disabled = false;
+        }
+    });
+}
+
 const btnSetCamera = $('btn-set-camera');
 if (btnSetCamera) {
     btnSetCamera.addEventListener('click', async () => {
