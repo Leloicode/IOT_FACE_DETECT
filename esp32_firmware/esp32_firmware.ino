@@ -252,6 +252,10 @@ void updateLcdTimer() {
   if (displayState != DISPLAY_NONE) {
     if (millis() - displayStartMs >= DISPLAY_DURATION) {
       lcd.clear();
+      lcd.setCursor(0, 0);
+      lcd.print("He thong diem");
+      lcd.setCursor(0, 1);
+      lcd.print("danh tu dong");
       displayState = DISPLAY_NONE;
     }
   }
@@ -297,6 +301,7 @@ void setup() {
   lcd.print("Khoi dong he");
   lcd.setCursor(0, 1);
   lcd.print("thong Diem Danh");
+  delay(5000);
 
   setup_wifi();
 
