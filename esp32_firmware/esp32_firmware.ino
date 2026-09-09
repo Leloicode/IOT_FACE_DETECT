@@ -217,6 +217,10 @@ void setup_wifi() {
 // ============================================================
 void reconnect() {
   while (!client.connected()) {
+    // Chống kẹt còi/đèn nếu rớt mạng đúng lúc đang kêu
+    updateHardware();
+    updateLcdTimer();
+
     Serial.print("Ket noi MQTT Broker...");
     
     // Hiển thị lên LCD đang kết nối MQTT
@@ -263,7 +267,12 @@ void reconnect() {
       lcd.setCursor(0, 1);
       lcd.print("Thu lai sau 5s");
       
-      delay(5000);
+      // Chờ 5s nhưng không chặn hoàn toàn (vẫn cập nhật phần cứng)
+      for (int i = 0; i < 50; i++) {
+        updateHardware();
+        updateLcdTimer();
+        delay(100);
+      }
     }
   }
 }
