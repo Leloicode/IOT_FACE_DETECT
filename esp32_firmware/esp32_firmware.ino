@@ -218,6 +218,14 @@ void setup_wifi() {
 void reconnect() {
   while (!client.connected()) {
     Serial.print("Ket noi MQTT Broker...");
+    
+    // Hiển thị lên LCD đang kết nối MQTT
+    lcd.clear();
+    lcd.setCursor(0, 0);
+    lcd.print("Dang ket noi");
+    lcd.setCursor(0, 1);
+    lcd.print("Server MQTT...");
+    
     String clientId = "ESP32Client-";
     clientId += String(random(0xffff), HEX);
 
@@ -235,10 +243,26 @@ void reconnect() {
       char buf[128];
       serializeJson(st, buf, sizeof(buf));
       client.publish(topic_status, buf);
+      
+      // Đổi màn hình về trạng thái sẵn sàng sau khi kết nối MQTT thành công
+      lcd.clear();
+      lcd.setCursor(0, 0);
+      lcd.print("He thong diem");
+      lcd.setCursor(0, 1);
+      lcd.print("danh tu dong");
+      displayState = DISPLAY_NONE;
+      
     } else {
       Serial.print(" That bai, ma loi: ");
       Serial.print(client.state());
       Serial.println(" Thu lai sau 5s");
+      
+      lcd.clear();
+      lcd.setCursor(0, 0);
+      lcd.print("Loi MQTT!");
+      lcd.setCursor(0, 1);
+      lcd.print("Thu lai sau 5s");
+      
       delay(5000);
     }
   }
@@ -306,6 +330,7 @@ void setup() {
   setup_wifi();
 
   client.setServer(mqtt_server, mqtt_port);
+  client.setBufferSize(512); // Tránh lỗi gói tin JSON bị quá tải kích thước
   client.setCallback(callback);
 }
 
