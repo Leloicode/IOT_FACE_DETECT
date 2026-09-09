@@ -14,6 +14,7 @@ public IP hoặc tunnel (ngrok/cloudflared). Cấu hình BACKEND_URL bên dướ
 
 import json
 import os
+import unicodedata
 import pickle
 import sqlite3
 import threading
@@ -36,6 +37,15 @@ import paho.mqtt.client as mqtt
 from flask import Flask, jsonify, render_template, request, Response
 from flask_cors import CORS
 
+def remove_accents(input_str):
+    if not input_str:
+        return ""
+    # Chuyển Đ đ thành D d (vì unicodedata không tách được chữ Đ)
+    s = str(input_str).replace("Đ", "D").replace("đ", "d")
+    # Tách dấu ra khỏi chữ cái và loại bỏ dấu
+    nfkd_form = unicodedata.normalize('NFKD', s)
+    return u"".join([c for c in nfkd_form if not unicodedata.combining(c)])
+
 # ----------------------------------------------------------------------
 # Cấu hình
 # ----------------------------------------------------------------------
@@ -52,6 +62,7 @@ TOPIC_RESULT = "iot_camera/attendance/result"
 TOPIC_ALERT = "iot_camera/attendance/alert"
 TOPIC_CONTROL = "iot_camera/attendance/control"
 TOPIC_STATUS = "iot_camera/attendance/status"
+TOPIC_LCD = "iot_camera/attendance/lcd"
 
 # Camera index. 0 = webcam mặc định, hoặc URL RTSP/IP camera.
 CAMERA_SOURCE = int(os.environ.get("CAMERA_SOURCE", 0))
@@ -195,7 +206,7 @@ def on_mqtt_message(client, userdata, msg):
 
 
 def mqtt_thread():
-    client = mqtt.Client(client_id="flask_backend", clean_session=True)
+    client = mqtt.Client(mqtt.CallbackAPIVersion.VERSION1, client_id="flask_backend", clean_session=True)
     client.on_message = on_mqtt_message
     while True:
         try:
@@ -206,7 +217,7 @@ def mqtt_thread():
             print(f"[MQTT] Lỗi, thử lại sau 5s: {e}")
             time.sleep(5)
             # Tạo client mới vì paho không reconnect được sau exception nặng
-            client = mqtt.Client(client_id="flask_backend", clean_session=True)
+            client = mqtt.Client(mqtt.CallbackAPIVersion.VERSION1, client_id="flask_backend", clean_session=True)
             client.on_message = on_mqtt_message
 
 
@@ -473,9 +484,13 @@ def recognizer_loop():
 
                     if name != "Nguoi La":
                         publish_client.publish(TOPIC_RESULT, json.dumps({"name": name, "id": student_id, "time": time_str, "image": image_url}))
+                        # Gửi thêm 1 gói siêu nhẹ không dấu cho ESP32 hiển thị LCD
+                        publish_client.publish(TOPIC_LCD, json.dumps({"type": "attend", "name": remove_accents(name)}))
                         print(f"[RECOG] Diem danh: {name} - {student_id}")
                     else:
                         publish_client.publish(TOPIC_ALERT, json.dumps({"status": "stranger", "time": time_str, "image": image_url}))
+                        # Gửi lệnh báo động siêu nhẹ cho LCD
+                        publish_client.publish(TOPIC_LCD, json.dumps({"type": "alert"}))
                         print(f"[RECOG] CANH BAO nguoi la")
                     last_publish[key] = now
             
@@ -552,7 +567,6 @@ def start_camera_threads():
 # ----------------------------------------------------------------------
 # Đăng ký nhân viên mới (train từ camera của backend)
 # ----------------------------------------------------------------------
-# Trạng thái đăng ký đang chạy (ngăn 2 đăng ký cùng lúc)
 register_state = {
     "running": False,
     "name": "",
@@ -609,8 +623,6 @@ def _register_worker(name, student_id, max_images):
             if frame is None:
                 time.sleep(0.05)
                 continue
-
-            time.sleep(0.15)  # giãn cách giữa các mẫu để quay góc khác nhau
 
             time.sleep(0.15)  # giãn cách giữa các mẫu để quay góc khác nhau
 
@@ -771,17 +783,11 @@ def api_alerts():
     return jsonify([dict(r) for r in rows])
 
 
-
-
-
 @app.route("/api/events")
 def api_events():
     """Trả các sự kiện mới nhất (polling đơn giản cho realtime)."""
     with events_lock:
         return jsonify(list(latest_events))
-
-
-
 
 
 @app.route("/api/status")
@@ -872,7 +878,7 @@ def video_feed():
 # ----------------------------------------------------------------------
 # Publish client (để gửi lệnh điều khiển xuống ESP32)
 # ----------------------------------------------------------------------
-publish_client = mqtt.Client(client_id="flask_control", clean_session=True)
+publish_client = mqtt.Client(mqtt.CallbackAPIVersion.VERSION1, client_id="flask_control", clean_session=True)
 
 
 def start_publish():

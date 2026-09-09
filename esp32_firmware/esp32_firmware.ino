@@ -18,11 +18,11 @@ Ticker buzzerTicker;
 const char* mqtt_server = "broker.emqx.io";
 const int mqtt_port = 1883;
 
-const char* topic_result   = "iot_camera/attendance/result";
-const char* topic_alert    = "iot_camera/attendance/alert";
-const char* topic_control  = "iot_camera/attendance/control"; // Topic nhận lệnh điều khiển (từ web)
-
+const char* topic_result   = "iot_camera/attendance/result"; // (Không cần đọc nữa vì nặng)
+const char* topic_alert    = "iot_camera/attendance/alert";  // (Không cần đọc nữa vì nặng)
+const char* topic_control  = "iot_camera/attendance/control"; 
 const char* topic_status   = "iot_camera/attendance/status";
+const char* topic_lcd      = "iot_camera/attendance/lcd"; // Topic siêu nhẹ cho LCD
 
 WiFiClient espClient;
 PubSubClient client(espClient);
@@ -90,34 +90,35 @@ void callback(char* topic, byte* payload, unsigned int length) {
     return;
   }
 
-  if (t == String(topic_result)) {
-    const char* name = doc["name"] | "Nguoi dung";
-    String shortName = truncateStr(name, 16);
-
-    showLcd("Xin chao:", shortName.c_str(), DISPLAY_ATTEND);
-
-    // Buzzer kêu 1 tiếng bíp ngắn (100ms)
-    digitalWrite(BUZZER_PIN, HIGH);
-    buzzerHigh = true;
-    buzzerToggleMs = millis() + 100;
+  if (t == String(topic_lcd)) {
+    const char* type = doc["type"] | "";
     
-    // Đèn LED Xanh bật sáng 2 giây báo hiệu thành công
-    digitalWrite(LED_GREEN_PIN, HIGH);
-    ledGreenHigh = true;
-    ledGreenToggleMs = millis() + 2000;
+    if (strcmp(type, "attend") == 0) {
+      const char* name = doc["name"] | "Nguoi dung";
+      String shortName = truncateStr(name, 16);
 
-    Serial.print("[LCD] Dien danh: ");
-    Serial.println(msg);
-  }
-  else if (t == String(topic_alert)) {
-    const char* status = doc["status"] | "";
-    if (strcmp(status, "stranger") == 0) {
-      showLcd("! CANH BAO !", "Phat Hien Nguoi La", DISPLAY_ALERT);
+      showLcd("Xin chao:", shortName.c_str(), DISPLAY_ATTEND);
+
+      // Buzzer kêu 1 tiếng bíp dài hơn (500ms) để dễ nghe
+      digitalWrite(BUZZER_PIN, HIGH);
+      buzzerHigh = true;
+      buzzerToggleMs = millis() + 500;
+      
+      // Đèn LED Xanh bật sáng 2 giây báo hiệu thành công
+      digitalWrite(LED_GREEN_PIN, HIGH);
+      ledGreenHigh = true;
+      ledGreenToggleMs = millis() + 2000;
+
+      Serial.print("[LCD] Xin chao: ");
+      Serial.println(name);
+    }
+    else if (strcmp(type, "alert") == 0) {
+      showLcd("! CANH BAO !", "Co Nguoi La!", DISPLAY_ALERT);
       // Đèn LED Đỏ sáng liên tục trong 5 giây
       digitalWrite(LED_PIN, HIGH);
       ledHigh = true;
       ledToggleMs = millis() + 5000;
-      Serial.println("[LCD] CANH BAO NGUOI LA - BAT LED DO");
+      Serial.println("[LCD] CANH BAO NGUOI LA");
     }
   }
   else if (t == String(topic_control)) {
@@ -235,8 +236,8 @@ void reconnect() {
 
     if (client.connect(clientId.c_str())) {
       Serial.println(" Da ket noi!");
-      client.subscribe(topic_result);
-      client.subscribe(topic_alert);
+      // Thay vì lắng nghe cục JSON to, chỉ nghe JSON siêu nhẹ của LCD
+      client.subscribe(topic_lcd);
       client.subscribe(topic_control); // Lắng nghe lệnh điều khiển
 
       // Thông báo trạng thái online lên broker để backend/web biết

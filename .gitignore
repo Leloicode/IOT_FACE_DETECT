@@ -12,3 +12,12 @@ node_modules/
 # OS
 .DS_Store
 Thumbs.db
+
+# ESP32 Build
+esp32_firmware/build/
+esp32_firmware/*.bin
+esp32_firmware/*.elf
+esp32_firmware/*.map
+
+# Camera Captures
+python_app/static/captures/
