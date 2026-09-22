@@ -24,61 +24,107 @@ const btnLogin = document.getElementById('btn-login');
 const loginKeyInput = document.getElementById('login-key');
 const loginError = document.getElementById('login-error');
 
-// Kiểm tra xem đã đăng nhập chưa
-const sessionKey = localStorage.getItem('is_logged_in');
-if (sessionKey === 'true') {
-    // Đã đăng nhập trong phiên này -> Bỏ qua form login
-    loginOverlay.style.display = 'none';
-    mainContainer.style.display = 'block';
-} else {
-    // Chưa đăng nhập -> Hiện form login
-    loginOverlay.classList.remove('hidden');
+// ============================================================
+// Hàm xác thực key với Google Sheet
+// ============================================================
+const SAVED_KEY_STORAGE = 'attendance_access_key';
+const loadingScreen = document.getElementById('loading-screen');
+
+function hideLoadingScreen() {
+    loadingScreen.style.opacity = '0';
+    setTimeout(() => { loadingScreen.style.display = 'none'; }, 400);
 }
 
+async function verifyKeyWithSheet(key) {
+    const response = await fetch(GOOGLE_SCRIPT_URL, {
+        method: 'POST',
+        body: JSON.stringify({ key: key, hwid: 'web-dashboard' })
+    });
+    return await response.json();
+}
+
+function showApp() {
+    hideLoadingScreen();
+    loginOverlay.style.display = 'none';
+    loginOverlay.classList.add('hidden');
+    mainContainer.style.display = 'block';
+}
+
+function showLoginForm(message) {
+    hideLoadingScreen();
+    loginOverlay.style.display = '';
+    loginOverlay.classList.remove('hidden');
+    mainContainer.style.display = 'none';
+    if (message) {
+        loginError.textContent = message;
+        loginError.classList.remove('hidden');
+    } else {
+        loginError.classList.add('hidden');
+    }
+}
+
+// Mỗi lần mở trang: tự động lấy key đã lưu và check với Google Sheet
+async function autoCheckSavedKey() {
+    const savedKey = localStorage.getItem(SAVED_KEY_STORAGE);
+    if (!savedKey) {
+        // Chưa có key -> ẩn loading, hiện form
+        showLoginForm();
+        return;
+    }
+
+    // Đang có key -> giữ loading-screen, ẩn form login, điền sẵn key vào input
+    loginKeyInput.value = savedKey;
+
+    try {
+        const data = await verifyKeyWithSheet(savedKey);
+        if (data.status === 'success') {
+            // Key còn hợp lệ -> ẩn loading, vào thẳng
+            showApp();
+        } else {
+            // Key hết hạn hoặc bị thu hồi -> xóa key cũ, hiện form
+            localStorage.removeItem(SAVED_KEY_STORAGE);
+            loginKeyInput.value = '';
+            showLoginForm(data.message || 'Key đã hết hạn hoặc không hợp lệ. Vui lòng nhập lại!');
+        }
+    } catch (error) {
+        console.error('Lỗi tự động xác thực:', error);
+        // Lỗi mạng -> hiện form để nhập lại
+        showLoginForm('Không kết nối được máy chủ xác thực. Kiểm tra mạng hoặc nhập lại key.');
+    }
+}
+
+// Chạy auto-check ngay khi trang tải
+autoCheckSavedKey();
+
+// Xử lý khi người dùng bấm nút đăng nhập thủ công
 btnLogin.addEventListener('click', async () => {
     const key = loginKeyInput.value.trim();
     if (!key) {
-        loginError.textContent = "Vui lòng nhập mã truy cập!";
+        loginError.textContent = 'Vui lòng nhập mã truy cập!';
         loginError.classList.remove('hidden');
         return;
     }
 
-    // Hiển thị trạng thái đang tải
     btnLogin.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> Đang kiểm tra...';
     btnLogin.disabled = true;
     loginError.classList.add('hidden');
 
     try {
-        const response = await fetch(GOOGLE_SCRIPT_URL, {
-            method: 'POST',
-            body: JSON.stringify({ key: key, hwid: 'web-dashboard' }) 
-            // Gửi chữ web-dashboard làm hwid giả để Apps Script tương thích với code cũ
-        });
-        
-        const data = await response.json();
-        
+        const data = await verifyKeyWithSheet(key);
+
         if (data.status === 'success') {
-            // Đăng nhập thành công
-            localStorage.setItem('is_logged_in', 'true');
-            
-            // Hiệu ứng ẩn form login
-            loginOverlay.classList.add('hidden');
-            setTimeout(() => {
-                loginOverlay.style.display = 'none';
-                mainContainer.style.display = 'block';
-            }, 500); // Đợi 0.5s cho animation mờ dần
-            
+            // Lưu key để auto-check những lần sau
+            localStorage.setItem(SAVED_KEY_STORAGE, key);
+            showApp();
         } else {
-            // Key sai hoặc hết hạn
-            loginError.textContent = data.message || "Key không hợp lệ hoặc đã hết hạn!";
+            loginError.textContent = data.message || 'Key không hợp lệ hoặc đã hết hạn!';
             loginError.classList.remove('hidden');
         }
     } catch (error) {
-        console.error("Lỗi xác thực:", error);
-        loginError.textContent = "Không thể kết nối đến máy chủ xác thực. Kiểm tra lại mạng hoặc URL Apps Script.";
+        console.error('Lỗi xác thực:', error);
+        loginError.textContent = 'Không thể kết nối đến máy chủ xác thực. Kiểm tra lại mạng hoặc URL Apps Script.';
         loginError.classList.remove('hidden');
     } finally {
-        // Khôi phục nút
         btnLogin.innerHTML = '<i class="fa-solid fa-right-to-bracket"></i> Xác Thực';
         btnLogin.disabled = false;
     }
